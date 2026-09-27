@@ -1,0 +1,12 @@
+{
+  "extends": "../tsconfig.webview.json",
+  "compilerOptions": {
+    "baseUrl": "..",
+    "paths": {
+      "@/*": ["../ui/src/*"],
+      "@vscode/*": ["./webview/*"],
+      "@novacode/ui/*": ["../ui/src/*"]
+    }
+  },
+  "include": ["**/*"]
+}

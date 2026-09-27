@@ -1,0 +1,391 @@
+import { registerFsRoutes } from '../fs/routes.js';
+import { registerQuotaRoutes } from '../quota/routes.js';
+import { registerSmallModelRoutes } from '../small-model/routes.js';
+import { registerWalkthroughRoutes } from '../walkthrough/routes.js';
+import { registerSessionGoalRoutes } from '../session-goal/routes.js';
+import { registerGitHubRoutes } from '../github/routes.js';
+import { registerLinearRoutes } from '../linear/routes.js';
+import { registerGuestRoutes } from '../guests/routes.js';
+import { registerBuiltInGuests } from '../guests/catalog.js';
+import { extensionsPersistPath } from '../guests/persist.js';
+import { registerGitRoutes } from '../git/routes.js';
+import { registerDevServerRoutes } from '../dev-servers/routes.js';
+import { registerMagicPromptRoutes } from '../magic-prompts/routes.js';
+import { registerSessionFoldersRoutes } from '../session-folders/routes.js';
+import { registerProjectContextRoutes } from '../project-context/routes.js';
+import { registerProjectSetupRoutes } from '../projects/routes.js';
+import { registerAgentMemoryRoutes } from '../agent-memory/routes.js';
+import { registerSessionKnowledgeRoutes } from '../session-knowledge/routes.js';
+import { registerPermissionAutoAcceptRoutes } from '../permission-auto-accept/runtime.js';
+import { registerSessionApprovalGateRoutes } from '../session-approval-gates/runtime.js';
+import { registerMessageQueueRoutes } from '../message-queue/runtime.js';
+import { registerRoutingPromptRewrite, registerRoutingRoutes } from '../routing/routes.js';
+import { registerConfigEntityRoutes } from './config-entity-routes.js';
+import { registerSettingsUtilityRoutes } from './core-routes.js';
+import { registerProjectIconRoutes } from './project-icon-routes.js';
+import { registerScheduledTaskRoutes } from '../scheduled-tasks/routes.js';
+import { registerAutomationRoutes } from '../automation/routes.js';
+import { registerNovaCodeSessionRoutes } from '../novacode-sessions/routes.js';
+import { registerNovaCodeControlRoutes } from '../novacode-control/routes.js';
+import { registerMarkdownImageGrantRoutes } from '../markdown-image-grants/routes.js';
+import { registerSkillRoutes } from './skill-routes.js';
+import { registerPluginRoutes } from './plugin-routes.js';
+import { getNpmInfo, clearCache as clearNpmCache } from './npm-registry.js';
+import { parseNpmSpec, parsePathSpec, isExactSemver } from './plugin-spec.js';
+import { registerOpenCodeRoutes } from './routes.js';
+import { getProviderSources, removeProviderConfig, upsertProviderConfig } from './providers.js';
+import { getAgentSources, getAgentConfig, createAgent, updateAgent, deleteAgent } from './agents.js';
+import { getCommandSources, createCommand, updateCommand, deleteCommand } from './commands.js';
+import { listMcpConfigs, getMcpConfig, createMcpConfig, updateMcpConfig, deleteMcpConfig } from './mcp.js';
+import { listSnippets, getSnippet, createSnippet, updateSnippet, deleteSnippet, expandSnippets } from './snippets.js';
+import {
+  listPluginEntries,
+  getPluginEntry,
+  createPluginEntry,
+  updatePluginEntry,
+  deletePluginEntry,
+  listPluginDirFiles,
+  readPluginDirFile,
+  writePluginDirFile,
+  deletePluginDirFile,
+  encodePluginId,
+  decodePluginId,
+} from './plugins.js';
+import { SKILL_DIR, SKILL_SCOPE, readSkillSupportingFile, writeSkillSupportingFile, deleteSkillSupportingFile } from './shared.js';
+import { getSkillSources, discoverSkills, mergeDiscoveredSkills, createSkill, updateSkill, deleteSkill, renameSkill, isManagedSkillPath } from './skills.js';
+import { getCuratedSkillsSources } from '../skills-catalog/curated-sources.js';
+import { getCacheKey, scanWithCache } from '../skills-catalog/cache.js';
+import { parseSkillRepoSource } from '../skills-catalog/source.js';
+import { scanSkillsRepository } from '../skills-catalog/scan.js';
+import { installSkillsFromRepository } from '../skills-catalog/install.js';
+import { fetchGitHubRepoMetas } from '../skills-catalog/github-meta.js';
+
+export const createFeatureRoutesRuntime = (dependencies) => {
+  const {
+    clientReloadDelayMs,
+  } = dependencies;
+
+  let quotaProviders = null;
+  const getQuotaProviders = async () => {
+    if (!quotaProviders) {
+      quotaProviders = await import('../quota/index.js');
+    }
+    return quotaProviders;
+  };
+
+  let smallModelService = null;
+  const getSmallModelService = async () => {
+    if (!smallModelService) {
+      smallModelService = await import('../small-model/index.js');
+    }
+    return smallModelService;
+  };
+
+  let walkthroughService = null;
+  const getWalkthroughService = async () => {
+    if (!walkthroughService) {
+      const [service, pullRequest] = await Promise.all([
+        import('../walkthrough/index.js'),
+        import('../walkthrough/pull-request.js'),
+      ]);
+      walkthroughService = { ...service, getPullRequestDiff: pullRequest.getPullRequestDiff, getPullRequestFileContents: pullRequest.getPullRequestFileContents };
+    }
+    return walkthroughService;
+  };
+
+  const registerRoutes = async (app, routeDependencies) => {
+    const {
+      crypto,
+      fs,
+      os,
+      path,
+      fsPromises,
+      spawn,
+      resolveGitBinaryForSpawn,
+      createFsSearchRuntime,
+      novacodeDataDir,
+      onGuestDeactivated,
+      novacodeUserConfigRoot,
+      managedChatsRoot,
+      normalizeDirectoryPath,
+      resolveProjectDirectory,
+      resolveOptionalProjectDirectory,
+      validateDirectoryPath,
+      readCustomThemesFromDisk,
+      saveImportedTheme,
+      deleteImportedTheme,
+      refreshOpenCodeAfterConfigChange,
+      getOpenCodeResolutionSnapshot,
+      getOpenCodeUpgradeCapability,
+      formatSettingsResponse,
+      readSettingsFromDisk,
+      readSettingsFromDiskMigrated,
+      persistSettings,
+      sanitizeProjects,
+      sanitizeSkillCatalogs,
+      isUnsafeSkillRelativePath,
+      buildOpenCodeUrl,
+      getOpenCodeAuthHeaders,
+      getOpenCodePort,
+      getOwnPorts,
+      devServerScanner,
+      buildAugmentedPath,
+      projectConfigRuntime,
+      projectContextRuntime,
+      agentMemoryRuntime,
+      isAgentMemoryEnabled,
+      sessionKnowledgeRuntime,
+      scheduledTasksRuntime,
+      scheduledTaskService,
+      novaCodeSessionService,
+      novaCodeControlService,
+      waitForOpenCodeReady,
+      getNovaCodeEventClients,
+      writeSseEvent,
+      emitSessionCreatedEvent,
+      permissionAutoAcceptRuntime,
+      sessionApprovalGatesRuntime,
+      messageQueueRuntime,
+      routingRuntime,
+      automationRuntime,
+      novacodeVersion,
+    } = routeDependencies;
+
+    registerSettingsUtilityRoutes(app, {
+      readCustomThemesFromDisk,
+      saveImportedTheme,
+      deleteImportedTheme,
+      refreshOpenCodeAfterConfigChange,
+      clientReloadDelayMs,
+    });
+
+    registerPermissionAutoAcceptRoutes(app, permissionAutoAcceptRuntime);
+    registerSessionApprovalGateRoutes(app, sessionApprovalGatesRuntime);
+    registerMessageQueueRoutes(app, messageQueueRuntime);
+    registerRoutingRoutes(app, routingRuntime);
+    // Before the generic OpenCode proxy: turns `novacode/auto` into a real model.
+    registerRoutingPromptRewrite(app, routingRuntime);
+
+    registerOpenCodeRoutes(app, {
+      crypto,
+      clientReloadDelayMs,
+      getOpenCodeResolutionSnapshot,
+      getOpenCodeUpgradeCapability,
+      formatSettingsResponse,
+      readSettingsFromDisk,
+      readSettingsFromDiskMigrated,
+      persistSettings,
+      sanitizeProjects,
+      validateDirectoryPath,
+      resolveProjectDirectory,
+      getProviderSources,
+      removeProviderConfig,
+      upsertProviderConfig,
+      refreshOpenCodeAfterConfigChange,
+      buildOpenCodeUrl,
+      getOpenCodeAuthHeaders,
+    });
+
+    registerProjectIconRoutes(app, {
+      fsPromises,
+      path,
+      crypto,
+      novacodeDataDir,
+      sanitizeProjects,
+      readSettingsFromDiskMigrated,
+      persistSettings,
+      createFsSearchRuntime,
+      spawn,
+      resolveGitBinaryForSpawn,
+    });
+
+    registerScheduledTaskRoutes(app, {
+      readSettingsFromDiskMigrated,
+      sanitizeProjects,
+      projectConfigRuntime,
+      scheduledTasksRuntime,
+      scheduledTaskService,
+      getNovaCodeEventClients,
+      writeSseEvent,
+    });
+
+    // Before the generic OpenCode proxy so `/api/webhooks/...` is never
+    // swallowed; the runtime is optional so a half-wired dev server still boots.
+    if (automationRuntime) {
+      registerAutomationRoutes(app, {
+        runtime: automationRuntime,
+        service: automationRuntime.service,
+        getNovaCodeEventClients,
+        writeSseEvent,
+      });
+    }
+
+    registerNovaCodeSessionRoutes(app, {
+      readSettingsFromDiskMigrated,
+      sanitizeProjects,
+      validateDirectoryPath,
+      buildOpenCodeUrl,
+      getOpenCodeAuthHeaders,
+      waitForOpenCodeReady,
+      emitSessionCreatedEvent,
+      sessionService: novaCodeSessionService,
+    });
+
+    registerNovaCodeControlRoutes(app, { controlService: novaCodeControlService });
+
+    registerMarkdownImageGrantRoutes(app, {
+      fsPromises,
+      path,
+      os,
+      crypto,
+      validateDirectoryPath,
+      buildOpenCodeUrl,
+      getOpenCodeAuthHeaders,
+    });
+
+    registerConfigEntityRoutes(app, {
+      resolveProjectDirectory,
+      resolveOptionalProjectDirectory,
+      refreshOpenCodeAfterConfigChange,
+      clientReloadDelayMs,
+      getAgentSources,
+      getAgentConfig,
+      createAgent,
+      updateAgent,
+      deleteAgent,
+      getCommandSources,
+      createCommand,
+      updateCommand,
+      deleteCommand,
+      listMcpConfigs,
+      getMcpConfig,
+      createMcpConfig,
+      updateMcpConfig,
+      deleteMcpConfig,
+      listSnippets,
+      getSnippet,
+      createSnippet,
+      updateSnippet,
+      deleteSnippet,
+      expandSnippets,
+    });
+
+    registerPluginRoutes(app, {
+      resolveOptionalProjectDirectory,
+      refreshOpenCodeAfterConfigChange,
+      clientReloadDelayMs,
+      listPluginEntries,
+      getPluginEntry,
+      createPluginEntry,
+      updatePluginEntry,
+      deletePluginEntry,
+      listPluginDirFiles,
+      readPluginDirFile,
+      writePluginDirFile,
+      deletePluginDirFile,
+      encodePluginId,
+      decodePluginId,
+      getNpmInfo,
+      parseNpmSpec,
+      parsePathSpec,
+      isExactSemver,
+    });
+
+    const { getProfiles, getProfile } = await import('../git/index.js');
+
+    registerSkillRoutes(app, {
+      fs,
+      path,
+      os,
+      resolveProjectDirectory,
+      resolveOptionalProjectDirectory,
+      readSettingsFromDisk,
+      sanitizeSkillCatalogs,
+      isUnsafeSkillRelativePath,
+      refreshOpenCodeAfterConfigChange,
+      clientReloadDelayMs,
+      buildOpenCodeUrl,
+      getOpenCodeAuthHeaders,
+      getOpenCodePort,
+      getSkillSources,
+      discoverSkills,
+      mergeDiscoveredSkills,
+      createSkill,
+      updateSkill,
+      deleteSkill,
+      renameSkill,
+      isManagedSkillPath,
+      readSkillSupportingFile,
+      writeSkillSupportingFile,
+      deleteSkillSupportingFile,
+      SKILL_SCOPE,
+      SKILL_DIR,
+      getCuratedSkillsSources,
+      getCacheKey,
+      scanWithCache,
+      parseSkillRepoSource,
+      scanSkillsRepository,
+      installSkillsFromRepository,
+      fetchGitHubRepoMetas,
+      getProfiles,
+      getProfile,
+    });
+
+    registerQuotaRoutes(app, { getQuotaProviders });
+    registerSmallModelRoutes(app, { getSmallModelService });
+    registerWalkthroughRoutes(app, { getWalkthroughService });
+    registerSessionGoalRoutes(app);
+    registerGitHubRoutes(app);
+    registerLinearRoutes(app);
+    await registerBuiltInGuests({ persistPath: extensionsPersistPath(novacodeDataDir), root: routeDependencies.builtInExtensionsDir });
+    registerGuestRoutes(app, { novacodeDataDir, novacodeVersion, resolveGitBinaryForSpawn, resolveOptionalProjectDirectory, getSmallModelService, onGuestDeactivated });
+    registerGitRoutes(app, {
+      emitWorktreeChanged: ({ directories, at }) => {
+        const clients = getNovaCodeEventClients();
+        for (const client of clients) {
+          try {
+            writeSseEvent(client, {
+              type: 'novacode:worktree-changed',
+              properties: { directories, at },
+            });
+          } catch {
+            clients.delete(client);
+          }
+        }
+      },
+    });
+    registerDevServerRoutes(app, { scanner: devServerScanner, getOwnPorts });
+    registerMagicPromptRoutes(app, {
+      fsPromises,
+      path,
+      novacodeDataDir,
+    });
+    registerProjectContextRoutes(app, { projectContextRuntime });
+    registerProjectSetupRoutes(app, { projectConfigRuntime });
+    registerAgentMemoryRoutes(app, { agentMemoryRuntime, isAgentMemoryEnabled });
+    registerSessionKnowledgeRoutes(app, { sessionKnowledgeRuntime });
+
+    registerSessionFoldersRoutes(app, {
+      fsPromises,
+      path,
+      novacodeDataDir,
+    });
+    registerFsRoutes(app, {
+      os,
+      path,
+      fsPromises,
+      spawn,
+      crypto,
+      normalizeDirectoryPath,
+      resolveProjectDirectory,
+      buildAugmentedPath,
+      resolveGitBinaryForSpawn,
+      novacodeUserConfigRoot,
+      managedChatsRoot,
+    });
+  };
+
+  return {
+    registerRoutes,
+  };
+};

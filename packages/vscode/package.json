@@ -1,0 +1,298 @@
+{
+  "name": "novacode",
+  "displayName": "Nova Code",
+  "description": "%extension.description%",
+  "version": "1.24.2",
+  "publisher": "fedaykindev",
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/openchamber/openchamber.git"
+  },
+  "qna": "https://discord.gg/ZYRSdnwwKA",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Machine Learning",
+    "Other"
+  ],
+  "keywords": [
+    "ai",
+    "claude",
+    "gpt",
+    "agent",
+    "coding",
+    "chatgpt",
+    "groq",
+    "assistant",
+    "opencode",
+    "novacode"
+  ],
+  "icon": "assets/app-icon.png",
+  "main": "./dist/extension.js",
+  "l10n": "./l10n",
+  "activationEvents": [
+    "onCommand:novacode.openSidebar",
+    "onCommand:novacode.attachExplorerToChat",
+    "onView:novacode.chatView"
+  ],
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "novacode",
+          "title": "Nova Code",
+          "icon": "assets/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "novacode": [
+        {
+          "type": "webview",
+          "id": "novacode.chatView",
+          "name": "%views.chat.name%"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "novacode.openSidebar",
+        "category": "Nova Code",
+        "title": "%command.openSidebar.title%",
+        "icon": {
+          "light": "assets/icon.svg",
+          "dark": "assets/icon-titlebar.svg"
+        }
+      },
+      {
+        "command": "novacode.focusChat",
+        "category": "Nova Code",
+        "title": "%command.focusChat.title%"
+      },
+      {
+        "command": "novacode.restartApi",
+        "category": "Nova Code",
+        "title": "%command.restartApi.title%"
+      },
+      {
+        "command": "novacode.showOpenCodeStatus",
+        "category": "Nova Code",
+        "title": "%command.showOpenCodeStatus.title%"
+      },
+      {
+        "command": "novacode.openAgentManager",
+        "category": "Nova Code",
+        "title": "%command.openAgentManager.title%",
+        "icon": "$(circuit-board)"
+      },
+      {
+        "command": "novacode.openActiveSessionInEditor",
+        "category": "Nova Code",
+        "title": "%command.openActiveSessionInEditor.title%",
+        "icon": "$(link-external)"
+      },
+      {
+        "command": "novacode.openNewSessionInEditor",
+        "category": "Nova Code",
+        "title": "%command.openNewSessionInEditor.title%",
+        "icon": {
+          "light": "assets/icon.svg",
+          "dark": "assets/icon-titlebar.svg"
+        }
+      },
+      {
+        "command": "novacode.openCurrentOrNewSessionInEditor",
+        "category": "Nova Code",
+        "title": "%command.openCurrentOrNewSessionInEditor.title%",
+        "icon": "$(link-external)"
+      },
+      {
+        "command": "novacode.addToContext",
+        "category": "Nova Code",
+        "title": "%command.addToContext.title%"
+      },
+      {
+        "command": "novacode.addLineComment",
+        "category": "Nova Code",
+        "title": "%command.addLineComment.title%"
+      },
+      {
+        "command": "novacode.submitLineComment",
+        "category": "Nova Code",
+        "title": "%command.submitLineComment.title%"
+      },
+      {
+        "command": "novacode.removeLineComment",
+        "category": "Nova Code",
+        "title": "%command.removeLineComment.title%",
+        "icon": "$(close)"
+      },
+      {
+        "command": "novacode.explain",
+        "category": "Nova Code",
+        "title": "%command.explain.title%"
+      },
+      {
+        "command": "novacode.improveCode",
+        "category": "Nova Code",
+        "title": "%command.improveCode.title%"
+      },
+      {
+        "command": "novacode.newSession",
+        "category": "Nova Code",
+        "title": "%command.newSession.title%",
+        "icon": "$(add)"
+      },
+      {
+        "command": "novacode.showSettings",
+        "category": "Nova Code",
+        "title": "%command.showSettings.title%",
+        "icon": "$(settings-gear)"
+      },
+      {
+        "command": "novacode.attachExplorerToChat",
+        "category": "Nova Code",
+        "title": "%command.attachExplorerToChat.title%"
+      }
+    ],
+    "submenus": [
+      {
+        "id": "novacode.submenu",
+        "label": "Nova Code"
+      }
+    ],
+    "menus": {
+      "comments/commentThread/context": [
+        {
+          "command": "novacode.submitLineComment",
+          "group": "inline",
+          "when": "commentController == novacode.inlineComments"
+        }
+      ],
+      "comments/commentThread/title": [
+        {
+          "command": "novacode.removeLineComment",
+          "group": "navigation",
+          "when": "commentController == novacode.inlineComments && commentThread == novacodeAttached"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "novacode.submitLineComment",
+          "when": "false"
+        },
+        {
+          "command": "novacode.removeLineComment",
+          "when": "false"
+        }
+      ],
+      "editor/context": [
+        {
+          "submenu": "novacode.submenu",
+          "group": "navigation"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "novacode.attachExplorerToChat",
+          "when": "resourceScheme == file && explorerResourceIsFolder == false",
+          "group": "navigation@50"
+        }
+      ],
+      "editor/title": [
+        {
+          "command": "novacode.openNewSessionInEditor",
+          "group": "navigation@1"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "novacode.newSession",
+          "when": "view == novacode.chatView",
+          "group": "navigation@1"
+        },
+        {
+          "command": "novacode.openCurrentOrNewSessionInEditor",
+          "when": "view == novacode.chatView",
+          "group": "navigation@2"
+        },
+        {
+          "command": "novacode.openAgentManager",
+          "when": "view == novacode.chatView",
+          "group": "navigation@3"
+        },
+        {
+          "command": "novacode.showSettings",
+          "when": "view == novacode.chatView",
+          "group": "navigation@4"
+        }
+      ],
+      "novacode.submenu": [
+        {
+          "command": "novacode.explain"
+        },
+        {
+          "command": "novacode.improveCode"
+        },
+        {
+          "command": "novacode.addToContext"
+        },
+        {
+          "command": "novacode.addLineComment"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Nova Code",
+      "properties": {
+        "novacode.apiUrl": {
+          "type": "string",
+          "default": "",
+          "description": "%configuration.apiUrl.description%"
+        },
+        "novacode.opencodeBinary": {
+          "type": "string",
+          "default": "",
+          "description": "%configuration.opencodeBinary.description%"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "bun run build",
+    "build": "bun run build:extension && bun run build:webview",
+    "build:extension": "esbuild src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node --minify --main-fields=module,main",
+    "build:webview": "VITE_OPENCODE_URL=/api vite build",
+    "dev": "concurrently -n \"ext,web\" -c \"cyan,magenta\" \"bun run watch:extension\" \"bun run dev:webview\"",
+    "dev:webview": "vite --host localhost --port 5173 --strictPort",
+    "watch:extension": "esbuild src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node --watch --sourcemap --main-fields=module,main",
+    "watch:webview": "vite build --watch",
+    "type-check": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.webview.json",
+    "lint": "bun x eslint --ext .ts,.tsx src webview",
+    "test": "node ../../scripts/run-isolated-tests.mjs src webview",
+    "package": "vsce package --no-dependencies"
+  },
+  "devDependencies": {
+    "@types/adm-zip": "^0.5.7",
+    "@types/vscode": "^1.85.0",
+    "@vitejs/plugin-react": "^5.0.0",
+    "@vscode/vsce": "^3.2.1",
+    "concurrently": "^9.2.1",
+    "esbuild": "^0.28.0",
+    "typescript": "~5.9.0",
+    "vite": "^7.1.2"
+  },
+  "dependencies": {
+    "@novacode/ui": "workspace:*",
+    "@opencode-ai/sdk": "1.18.31",
+    "adm-zip": "^0.6.0",
+    "jsonc-parser": "^3.3.1",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "yaml": "^2.8.1"
+  }
+}
