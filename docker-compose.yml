@@ -1,0 +1,33 @@
+services:
+  novacode:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: novacode
+    ports:
+      - "3000:3000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./data/novacode:/home/novacode/.config/novacode
+      - ./data/opencode/share:/home/novacode/.local/share/opencode
+      - ./data/opencode/state:/home/novacode/.local/state/opencode
+      - ./data/opencode/config:/home/novacode/.config/opencode
+      - ./data/ssh:/home/novacode/.ssh
+      - ./workspaces:/home/novacode/workspaces
+    environment:
+      # Docker binds Nova Code to 0.0.0.0 for port mapping, so UI auth is required.
+      # Set this before starting, for example:
+      #   NOVACODE_UI_PASSWORD="$(openssl rand -base64 24)" docker compose up -d
+      NOVACODE_UI_PASSWORD: ${NOVACODE_UI_PASSWORD:?Set NOVACODE_UI_PASSWORD before exposing Nova Code through Docker}
+    # NOVACODE_HOST: 0.0.0.0  # Bind address (default in Docker entrypoint: 0.0.0.0)
+    # NOVACODE_TUNNEL_PROVIDER: cloudflare
+    # NOVACODE_TUNNEL_MODE: quick  # quick | managed-remote | managed-local
+    # NOVACODE_TUNNEL_HOSTNAME: app.example.com  # required for managed-remote
+    # NOVACODE_TUNNEL_TOKEN: your_cloudflare_token  # required for managed-remote
+    # NOVACODE_TUNNEL_CONFIG: /home/novacode/.cloudflared/config.yml  # optional for managed-local
+    # OH_MY_OPENCODE: true # enable oh-my-opencode
+    # OPENCODE_HOST: http://172.17.0.1:4096 # Connect to external OpenCode server
+    # OPENCODE_SKIP_START: true # skip start opencode
+    # OPENCHAMBER_OPENCODE_HOSTNAME: 0.0.0.0 # Bind OpenCode to all interfaces
+    restart: unless-stopped
