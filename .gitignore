@@ -81,4 +81,3 @@ workspaces/
 .maintenance-clone
 test-results/
 artifacts/
-.playwright-mcp/
