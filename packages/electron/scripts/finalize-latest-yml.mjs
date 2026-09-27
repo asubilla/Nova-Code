@@ -8,7 +8,7 @@ const version = process.env.NOVACODE_VERSION;
 
 if (!dir) throw new Error('LATEST_YML_DIR is required');
 if (!repo) throw new Error('GH_REPO is required');
-if (!version) throw new Error('OPENCHAMBER_VERSION is required');
+if (!version) throw new Error('NOVACODE_VERSION is required');
 
 const parse = (content) => {
   const lines = content.split('\n');
