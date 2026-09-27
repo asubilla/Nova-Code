@@ -1,0 +1,62 @@
+---
+title: Automações
+description: Execute fluxos de trabalho quando um webhook dispara ou um evento de sessão acontece.
+---
+
+# Automações
+
+Automações conectam gatilhos a fluxos de trabalho de várias etapas: um webhook ou um evento do projeto inicia um pipeline de prompts e comandos shell, com regras de aprovação automática, orçamentos, retentativas e uma caixa de entrada de aprovações. Configure em **Configurações → Nova Code → Automação**.
+
+## Gatilhos
+
+Um gatilho é o que inicia um fluxo de trabalho (ou uma tarefa agendada). Há dois tipos:
+
+- **Webhook** — um HTTP POST de fora do Nova Code. Você recebe uma URL e um segredo; envie o segredo no cabeçalho `X-Webhook-Secret`. Bom para CI, cron em outra máquina ou um botão em outra ferramenta.
+- **Evento** — algo que já aconteceu aqui: uma sessão terminou, uma sessão falhou ou uma tarefa agendada falhou.
+
+Aponte cada gatilho para um fluxo de trabalho (ou tarefa agendada) e salve. **Fire** executa um gatilho na mão para conferir a conexão antes de algo externo chamá-lo.
+
+## Fluxos de trabalho
+
+Um fluxo de trabalho é uma lista ordenada de etapas. Cada etapa é:
+
+- **Prompt** — enviar uma mensagem para uma sessão (criar uma ou reutilizar um id existente), com opção de esperar a sessão ficar ociosa.
+- **Shell** — rodar um comando no diretório do projeto, com tempo limite.
+
+Cada etapa tem sua própria política **em caso de falha**:
+
+- **stop** (padrão) — encerrar a execução e registrar o erro
+- **continue** — registrar o erro e seguir
+- **retry** — repetir com backoff exponencial, usando as configurações de retry do fluxo
+
+Um **orçamento** opcional (`max tokens`, `max attempts`) interrompe a execução limpa com `budget_exhausted` em vez de falhar no meio de uma etapa. **Run** executa um fluxo de trabalho na hora; o log de auditoria registra cada etapa.
+
+## Regras de aprovação automática
+
+As regras em **Policy** decidem o que acontece quando o agente pede uma permissão. Cada regra casa por padrões de ferramenta e conteúdo (`*` e `?` curingas). A primeira regra ativa que casa vence:
+
+- **accept** — aprovar automaticamente
+- **deny** — recusar (retida e marcada como negada)
+- **hold** — deixar para você, registrada na caixa de aprovações
+
+A política de automação roda antes da rede de segurança externa; o primeiro veredito não nulo vence.
+
+## Caixa de entrada de aprovações
+
+Permissões retidas caem na caixa de aprovações. Aprove ou recuse uma por uma, ou selecione várias e resolva em lote. Cada decisão responde ao OpenCode para que o agente em espera continue (ou pare) na hora.
+
+## Log de auditoria
+
+Cada execução anota uma entrada: o que disparou, o resultado de cada etapa, vereditos de política e escalações. Entradas são só de acréscimo e têm teto, então o log nunca cresce sem limite. Uma falha ao gravar auditoria vira aviso e nunca derruba a execução que a produziu.
+
+## Tenha em mente
+
+- Segredos de webhook nunca saem do servidor e não aparecem de novo após salvar.
+- Gatilhos e fluxos de trabalho só disparam enquanto o servidor Nova Code está rodando.
+- Um gatilho ou fluxo ruim é ignorado na leitura; nunca bloqueia os outros.
+
+## Relacionado
+
+- [Tarefas agendadas](/scheduled-tasks/) — rode um prompt em um cronograma; uma tarefa com falha pode disparar uma automação
+- [Objetivos de sessão](/session-goals/) — faça um prompt ir até o fim
+- [Notificações](/notifications/) — fique sabendo quando uma sessão termina

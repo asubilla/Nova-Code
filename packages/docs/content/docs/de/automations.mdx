@@ -1,0 +1,62 @@
+---
+title: Automatisierungen
+description: Workflows ausführen, wenn ein Webhook feuert oder ein Sitzungsereignis passiert.
+---
+
+# Automatisierungen
+
+Automatisierungen verbinden Trigger mit mehrstufigen Workflows: Ein Webhook oder ein Projekt-Ereignis startet eine Pipeline aus Prompts und Shell-Befehlen — mit Auto-Genehmigungsregeln, Budgets, Wiederholungen und einer Genehmigungsliste. Richte sie unter **Einstellungen → Nova Code → Automatisierung** ein.
+
+## Trigger
+
+Ein Trigger ist das, was einen Workflow (oder einen geplanten Task) startet. Zwei Arten:
+
+- **Webhook** — ein HTTP POST von außerhalb von Nova Code. Du bekommst eine URL und ein Geheimnis; sende es im Header `X-Webhook-Secret`. Gut für CI, Cron auf einem anderen Rechner oder einen Knopf in einem anderen Tool.
+- **Ereignis** — etwas, das hier schon passiert ist: eine Sitzung ist fertig, eine Sitzung ist fehlgeschlagen oder ein geplanter Task ist fehlgeschlagen.
+
+Zeige jeden Trigger auf einen Workflow (oder geplanten Task) und speichere. **Fire** startet einen Trigger von Hand, damit du die Verbindung prüfen kannst, bevor etwas Externes aufruft.
+
+## Workflows
+
+Ein Workflow ist eine geordnete Liste von Schritten. Jeder Schritt ist entweder:
+
+- **Prompt** — eine Nachricht an eine Sitzung senden (neue anlegen oder eine vorhandene ID wiederverwenden), optional warten, bis die Sitzung inaktiv ist.
+- **Shell** — einen Befehl im Projektverzeichnis ausführen, mit Zeitlimit.
+
+Jeder Schritt hat seine eigene **Bei Fehler**-Politik:
+
+- **stop** (Standard) — Lauf beenden und den Fehler festhalten
+- **continue** — den Fehler festhalten und weitermachen
+- **retry** — mit exponentiellem Backoff wiederholen, nach den Wiederholungs-Einstellungen des Workflows
+
+Ein optionales **Budget** (`max tokens`, `max attempts`) beendet den Lauf sauber mit `budget_exhausted`, statt mitten in einem Schritt zu scheitern. **Run** führt einen Workflow sofort aus; das Audit-Log hält jeden Schritt fest.
+
+## Auto-Genehmigungsregeln
+
+Regeln unter **Policy** entscheiden, was passiert, wenn der Agent eine Berechtigung anfragt. Jede Regel passt über Werkzeug- und Inhaltsmuster (`*` und `?` Platzhalter). Die erste passende aktive Regel gewinnt:
+
+- **accept** — automatisch genehmigen
+- **deny** — ablehnen (zurückgehalten und als abgelehnt markiert)
+- **hold** — für dich behalten, in der Genehmigungsliste festgehalten
+
+Die Automatisierungs-Policy läuft vor dem äußeren Sicherheitsnetz; der erste nicht-leere Vorbehalt gewinnt.
+
+## Genehmigungsliste
+
+Zurückgehaltene Berechtigungen landen in der Genehmigungsliste. Genehmige oder lehne einzeln ab, oder wähle mehrere und löse sie gebündelt. Jede Entscheidung antwortet an OpenCode, damit der wartende Agent sofort weitermacht (oder stoppt).
+
+## Audit-Log
+
+Jeder Lauf hält einen Eintrag fest: was gefeuert hat, das Ergebnis jedes Schritts, Policy-Vorbehalte und Eskalationen. Einträge sind nur anhängbar und gedeckelt, damit das Log nie unbegrenzt wächst. Ein fehlgeschlagener Audit-Schreibvorgang wird als Warnung festgehalten und scheitert nie den Lauf, der ihn erzeugt hat.
+
+## Behalte im Kopf
+
+- Webhook-Geheimnisse verlassen den Server nie und werden nach dem Speichern nicht erneut angezeigt.
+- Trigger und Workflows feuern nur, während der Nova Code Server läuft.
+- Ein schlechter Trigger oder Workflow wird beim Lesen übersprungen; er blockiert nie die anderen.
+
+## Verwandtes
+
+- [Geplante Aufgaben](/scheduled-tasks/) — einen Prompt nach Zeitplan ausführen; ein fehlgeschlagener Task kann eine Automatisierung auslösen
+- [Session Goals](/session-goals/) — einen Prompt bis zum Abschluss verfolgen
+- [Benachrichtigungen](/notifications/) — erfahren, wann eine Sitzung fertig ist

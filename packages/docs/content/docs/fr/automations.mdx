@@ -1,0 +1,62 @@
+---
+title: Automations
+description: Exécutez des workflows quand un webhook se déclenche ou qu'un événement de session se produit.
+---
+
+# Automations
+
+Les automations relient des déclencheurs à des workflows multi-étapes : un webhook ou un événement de projet lance un pipeline de prompts et de commandes shell, avec des règles d'approbation automatique, des budgets, des relances et une boîte d'approbation. Configurez-les dans **Réglages → Nova Code → Automatisation**.
+
+## Déclencheurs
+
+Un déclencheur est ce qui lance un workflow (ou une tâche planifiée). Deux kinds :
+
+- **Webhook** — une requête HTTP POST depuis l'extérieur de Nova Code. Vous obtenez une URL et un secret ; envoyez le secret dans l'en-tête `X-Webhook-Secret`. Idéal pour une CI, un cron sur une autre machine ou un bouton dans un autre outil.
+- **Événement** — quelque chose qui s'est déjà passé ici : une session est terminée, une session a échoué, ou une tâche planifiée a échoué.
+
+Pointez chaque déclencheur vers un workflow (ou une tâche planifiée), puis enregistrez. **Fire** exécute un déclencheur à la main pour vérifier le câblage avant qu'un système externe ne l'appelle.
+
+## Workflows
+
+Un workflow est une liste ordonnée d'étapes. Chaque étape est soit :
+
+- **Prompt** — envoyer un message à une session (en créer une ou réutiliser un id existant), avec option d'attendre que la session soit inactive.
+- **Shell** — exécuter une commande dans le répertoire du projet, avec un délai d'attente.
+
+Chaque étape a sa propre politique **en cas d'échec** :
+
+- **stop** (par défaut) — terminer l'exécution et consigner l'erreur
+- **continue** — consigner l'erreur et continuer
+- **retry** — réessayer avec un back-off exponentiel, selon les réglages de relance du workflow
+
+Un **budget** facultatif (`max tokens`, `max attempts`) arrête proprement l'exécution avec `budget_exhausted` au lieu d'échouer au milieu d'une étape. **Run** exécute un workflow immédiatement ; le journal d'audit consigne chaque étape.
+
+## Règles d'approbation automatique
+
+Les règles sous **Policy** décident de ce qui se passe quand l'agent demande une permission. Chaque règle correspond à des motifs d'outil et de contenu (wildcards `*` et `?`). La première règle activée correspondante gagne :
+
+- **accept** — approuver automatiquement
+- **deny** — refuser (retenu et marqué comme refusé)
+- **hold** — vous le laisse, consigné dans la boîte d'approbation
+
+La politique d'automation s'exécute avant le filet de sécurité externe ; le premier verdict non nul gagne.
+
+## Boîte d'approbations
+
+Les permissions retenues atterrissent dans la boîte d'approbations. Approuvez ou refusez une par une, ou sélectionnez-en plusieurs et résolvez-les en lot. Chaque décision répond à OpenCode pour que l'agent en attente continue (ou s'arrête) sur-le-champ.
+
+## Journal d'audit
+
+Chaque exécution ajoute une entrée : ce qui s'est déclenché, le résultat de chaque étape, les verdicts de politique et les escalades. Les entrées sont en ajout uniquement et plafonnées, donc le journal ne grandit jamais sans limite. Un échec d'écriture d'audit est consigné comme avertissement et ne fait jamais échouer l'exécution qui l'a produit.
+
+## À garder à l'esprit
+
+- Les secrets de webhook ne quittent jamais le serveur et ne sont pas montrés à nouveau après l'enregistrement.
+- Les déclencheurs et workflows ne se déclenchent que tant que le serveur Nova Code tourne.
+- Un mauvais déclencheur ou workflow est ignoré à la lecture ; il ne bloque jamais les autres.
+
+## Voir aussi
+
+- [Tâches planifiées](/scheduled-tasks/) — exécuter un prompt selon un horaire ; une tâche échouée peut déclencher une automation
+- [Objectifs de session](/session-goals/) — mener un prompt à son terme
+- [Notifications](/notifications/) — savoir quand une session est terminée

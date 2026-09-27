@@ -1,0 +1,62 @@
+---
+title: Automatyzacje
+description: Uruchamiaj przepływy pracy, gdy webhook zostanie wyzwolony lub wydarzy się zdarzenie sesji.
+---
+
+# Automatyzacje
+
+Automatyzacje łączą wyzwalacze z wieloetapowymi przepływami pracy: webhook lub zdarzenie projektu uruchamia pipeline promptów i poleceń shell, z regułami autozatwierdzania, budżetami, ponowieniami i skrzynką zatwierdzeń. Skonfiguruj je w **Ustawienia → Nova Code → Automatyzacja**.
+
+## Wyzwalacze
+
+Wyzwalacz to coś, co uruchamia przepływ pracy (lub zaplanowane zadanie). Są dwa rodzaje:
+
+- **Webhook** — HTTP POST spoza Nova Code. Dostajesz URL i sekret; wyślij sekret w nagłówku `X-Webhook-Secret`. Dobre dla CI, cron na innej maszynie lub przycisku w innym narzędziu.
+- **Zdarzenie** — coś, co już się tu wydarzyło: sesja się zakończyła, sesja nie powiodła się lub zaplanowane zadanie nie powiodło się.
+
+Skieruj każdy wyzwalacz na jeden przepływ pracy (lub zaplanowane zadanie) i zapisz. **Fire** uruchamia wyzwalacz ręcznie, żeby sprawdzić połączenia, zanim zewnętrzne źródło go wywoła.
+
+## Przepływy pracy
+
+Przepływ pracy to uporządkowana lista kroków. Każdy krok to:
+
+- **Prompt** — wyślij wiadomość do sesji (utwórz nową lub użyj istniejącego id), opcjonalnie poczekaj, aż sesja będzie bezczynna.
+- **Shell** — uruchom polecenie w katalogu projektu, z limitem czasu.
+
+Każdy krok ma własną politykę **przy błędzie**:
+
+- **stop** (domyślnie) — zakończ uruchomienie i zapisz błąd
+- **continue** — zapisz błąd i przejdź dalej
+- **retry** — ponów z wykładniczym backoffem, według ustawień ponawiania przepływu
+
+Opcjonalny **budżet** (`max tokens`, `max attempts`) czysto zatrzymuje uruchomienie z `budget_exhausted` zamiast awarii w połowie kroku. **Run** uruchamia przepływ pracy od razu; dziennik audytu zapisuje każdy krok.
+
+## Reguły autozatwierdzania
+
+Reguły w **Policy** decydują, co się dzieje, gdy agent prosi o uprawnienie. Każda reguła dopasowuje wzorce narzędzia i treści (wildcards `*` i `?`). Wyg pierwsza aktywna reguła, która pasuje:
+
+- **accept** — autozatwierdź
+- **deny** — odrzuć (wstrzymane i oznaczone jako odrzucone)
+- **hold** — zostaw Tobie, zapisane w skrzynce zatwierdzeń
+
+Polityka automatyzacji działa przed zewnętrzną siecią bezpieczeństwa; wygiera pierwszy niepusty werdykt.
+
+## Skrzynka zatwierdzeń
+
+Wstrzymane uprawnienia trafiają do skrzynki zatwierdzeń. Zatwierdzaj lub odrzucaj po jednym albo zaznacz kilka i rozwiąż wsadowo. Każda decyzja odpowiada do OpenCode, więc czekający agent od razu kontynuuje (albo zatrzymuje się).
+
+## Dziennik audytu
+
+Każde uruchomienie dopisuje wpis: co wyzwoliło, wynik każdego kroku, werdykty polityki i eskalacje. Wpisy są tylko dopisywane i mają limit, więc dziennik nigdy nie rośnie bez granicy. Nieudany zapis audytu jest logowany jako ostrzeżenie i nigdy nie psuje uruchomienia, które go wygenerowało.
+
+## Pamiętaj
+
+- Sekrety webhook nigdy nie opuszczają serwera i nie są ponownie pokazywane po zapisaniu.
+- Wyzwalacze i przepływy pracy działają tylko gdy serwer Nova Code działa.
+- Jeden zły wyzwalacz lub przepływ jest pomijany przy odczycie; nigdy nie blokuje innych.
+
+## Powiązane
+
+- [Zaplanowane zadania](/scheduled-tasks/) — uruchamiaj prompt według harmonogramu; nieudane zadanie może wyzwolić automatyzację
+- [Cele sesji](/session-goals/) — doprowadź prompt do końca
+- [Powiadomienia](/notifications/) — dowiaduj się o zakończonych sesjach

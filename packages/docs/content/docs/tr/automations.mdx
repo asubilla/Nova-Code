@@ -1,0 +1,62 @@
+---
+title: Otomasyonlar
+description: Bir webhook tetiklendiğinde veya oturum olayı gerçekleştiğinde iş akışları çalıştırın.
+---
+
+# Otomasyonlar
+
+Otomasyonlar tetikleyicileri çok adımlı iş akışlarına bağlar: bir webhook veya proje olayı, otomatik onay kuralları, bütçeler, yeniden denemeler ve bir onay gelen kutusu ile prompt ve kabuk komutlarından oluşan bir boru hattı başlatır. **Ayarlar → Nova Code → Otomasyon** bölümünden ayarlayın.
+
+## Tetikleyiciler
+
+Tetikleyici, bir iş akışını (veya zamanlanmış görevi) başlatan şeydir. İki türü vardır:
+
+- **Webhook** — Nova Code dışından gelen bir HTTP POST. Bir URL ve gizli anahtar alırsınız; gizli anahtarı `X-Webhook-Secret` başlığında gönderin. CI, başka makinedeki cron veya başka bir araçtaki düğme için uygundur.
+- **Olay** — burada zaten olan bir şey: bir oturum bitti, bir oturum başarısız oldu veya bir zamanlanmış görev başarısız oldu.
+
+Her tetikleyiciyi bir iş akışına (veya zamanlanmış göreve) yönlendirin ve kaydedin. **Fire**, dışarıdan biri çağırmadan önce bağlantıları kontrol etmek için tetikleyiciyi elle çalıştırır.
+
+## İş akışları
+
+İş akışı, sıralı bir adım listesidir. Her adım şunlardan biridir:
+
+- **Prompt** — bir oturuma mesaj göndermek (yeni oluşturmak veya mevcut kimliği yeniden kullanmak), isteğe bağlı olarak oturum boştana kadar beklemek.
+- **Shell** — proje dizininde zaman aşımıyla bir komut çalıştırmak.
+
+Her adımın kendi **hata durumunda** politikası vardır:
+
+- **stop** (varsayılan) — çalışmayı bitir ve hatayı kaydet
+- **continue** — hatayı kaydet ve devam et
+- **retry** — iş akışının yeniden deneme ayarlarıyla üstel geri çekilme ile tekrar dene
+
+İsteğe bağlı bir **bütçe** (`max tokens`, `max attempts`) çalışmayı adım ortasında başarısız olmak yerine `budget_exhausted` ile temizce durdurur. **Run** bir iş akışını hemen çalıştırır; denetim günlüğü her adımı kaydeder.
+
+## Otomatik onay kuralları
+
+**Policy** altındaki kurallar, ajan bir izin istediğinde ne olacağını belirler. Her kural araç ve içerik desenleriyle (`*` ve `?` joker karakterler) eşleşir. Eşleşen ilk etkin kural kazanır:
+
+- **accept** — otomatik onayla
+- **deny** — reddet (bekletildi ve reddedildi olarak işaretlendi)
+- **hold** — sana bıraktı, onay gelen kutusuna işlendi
+
+Otomasyon politikası dış güvenlik ağından önce çalışır; ilk boş olmayan hüküm kazanır.
+
+## Onay gelen kutusu
+
+Bekletilen izinler onay gelen kutusuna düşer. Tek tek onaylayın veya reddedin, ya da birden fazlasını seçip toplu çözün. Her karar, bekleyen ajanın hemen devam etmesi (veya durması) için OpenCode'a yanıt verir.
+
+## Denetim günlüğü
+
+Her çalışma bir kayıt ekler: ne tetikledi, her adımın sonucu, politika hükümleri ve yükseltmeler. Kayıtlar yalnızca eklenir ve bir üst sınıra sahiptir; günlük asla sınırsız büyümez. Başarısız bir denetim yazımı uyarı olarak kaydedilir ve onu üreten asla çalışmayı düşürmez.
+
+## Aklınızda bulunsun
+
+- Webhook gizli anahtarları sunucuyu asla terk etmez ve kaydedildikten sonra tekrar gösterilmez.
+- Tetikleyiciler ve iş akışları yalnızca Nova Code sunucusu çalışırken tetiklenir.
+- Kötü bir tetikleyici veya iş akışı okunurken atlanır; diğerlerini asla engellemez.
+
+## İlgili
+
+- [Zamanlanmış görevler](/scheduled-tasks/) — bir promptu zamanlamaya göre çalıştırın; başarısız bir görev bir otomasyonu tetikleyebilir
+- [Oturum hedefleri](/session-goals/) — bir promptu sonuna kadar götürün
+- [Bildirimler](/notifications/) — bir oturum bittiğinde haberdar olun

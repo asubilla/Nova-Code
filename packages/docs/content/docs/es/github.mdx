@@ -1,0 +1,38 @@
+---
+title: Issues y PRs de GitHub
+description: Conecta GitHub e inicia sesiones desde issues y pull requests.
+---
+
+# Issues y PRs de GitHub
+
+Conecta tu cuenta de GitHub y Nova Code podrá traer issues y pull requests, iniciar una sesión directamente desde uno, y abrir o actualizar PRs por ti.
+
+## Conecta GitHub
+
+1. Abre **Settings → Integrations** y despliega la tarjeta **GitHub**.
+2. Elige **Connect GitHub**. Nova Code muestra un enlace y un código corto.
+3. Abre el enlace, introduce el código y aprueba.
+
+Cuando esté conectado, tu cuenta aparece en la tarjeta. Puedes conectar más de una cuenta y cambiar entre ellas, o desconectar en cualquier momento. Si la CLI `gh` tiene sesión iniciada en la misma máquina, Nova Code puede usarla como respaldo.
+
+## Empieza a trabajar desde una issue o PR
+
+Cuando creas una [sesión de worktree](/es/worktrees/) con GitHub conectado, puedes elegir **Start from GitHub issue/PR**:
+
+- elige una **issue** y Nova Code nombra la rama según ella y abre la sesión con la issue y sus comentarios como primer mensaje
+- elige un **pull request** y hace checkout de la rama del PR; puedes incluir el diff del PR para que el agente tenga el cambio completo
+
+Esto te deja directamente en una sesión con el contexto ya cargado.
+
+## Abre y gestiona pull requests
+
+Desde la pestaña **PR** en la [vista de git](/es/git/), puedes crear un pull request, actualizarlo, marcar un borrador como listo o fusionarlo. Nova Code puede generar el título y la descripción del PR a partir de tus cambios.
+
+## Vincula una issue o PR a un mensaje
+
+En el compositor del chat, elige **Link GitHub Issue** o **Link GitHub PR**. La issue, o el PR con su diff, acompaña tu siguiente mensaje como contexto, y el panel de estado de trabajo de la sesión conserva un enlace. El mismo selector puede iniciar una nueva sesión con la issue como primer prompt.
+
+## Relacionado
+
+- [Flujos de trabajo de Git y GitHub](/es/git/) — haz commit y gestiona ramas
+- [Sesiones de worktree](/es/worktrees/) — donde empiezan las sesiones de issue y PR

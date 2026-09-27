@@ -1,0 +1,34 @@
+---
+title: OpenCode Connection
+description: Fix Nova Code not connecting to its OpenCode server.
+---
+
+# OpenCode Connection
+
+If Nova Code loads but never gets past "OpenCode is restarting," or chat won't respond, the server it talks to isn't reachable. Work through these.
+
+## It's stuck on "OpenCode is restarting"
+
+- give it a moment right after launch — this state is normal while the server starts
+- check whether the server is alive with `nova status`
+- restart it with `nova restart`
+- view startup details with `nova logs`
+
+## You're connecting to your own server
+
+If you set Nova Code to use an existing server, double-check the setup from [OpenCode Server](/opencode-server/):
+
+- `OPENCODE_HOST` must include the port, with no path — for example `http://localhost:4096`
+- set `OPENCODE_SKIP_START=true` so Nova Code doesn't also start its own
+- if the address is invalid, Nova Code ignores it and starts its own server instead — look for a `[config]` warning in the logs
+
+## Still failing
+
+- confirm Node.js is version `20` or newer
+- reinstall the latest CLI
+- open `http://localhost:3000` directly before testing any tunnel or remote link
+
+## Related
+
+- [OpenCode Server](/opencode-server/) — how Nova Code finds and manages the server
+- [Troubleshooting](/troubleshooting/) — other common issues

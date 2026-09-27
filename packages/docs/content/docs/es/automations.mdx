@@ -1,0 +1,62 @@
+---
+title: Automatizaciones
+description: Ejecuta flujos de trabajo cuando se dispara un webhook o ocurre un evento de sesión.
+---
+
+# Automatizaciones
+
+Las automatizaciones conectan disparadores con flujos de trabajo de varios pasos: un webhook o un evento del proyecto inicia una cadena de prompts y comandos de shell, con reglas de aprobación automática, presupuestos, reintentos y una bandeja de aprobaciones. Configúralas en **Ajustes → Nova Code → Automatización**.
+
+## Disparadores
+
+Un disparador es lo que inicia un flujo de trabajo (o una tarea programada). Hay dos tipos:
+
+- **Webhook** — una HTTP POST desde fuera de Nova Code. Obtienes una URL y un secreto; envíalo en la cabecera `X-Webhook-Secret`. Útil para CI, cron en otra máquina o un botón en otra herramienta.
+- **Evento** — algo que ya pasó aquí: una sesión terminó, una sesión falló o una tarea programada falló.
+
+Apunta cada disparador a un flujo de trabajo (o tarea programada) y guarda. **Fire** ejecuta un disparador a mano para comprobar la conexión antes de que algo externo lo llame.
+
+## Flujos de trabajo
+
+Un flujo de trabajo es una lista ordenada de pasos. Cada paso es:
+
+- **Prompt** — enviar un mensaje a una sesión (crear una o reutilizar un id existente), con opción de esperar a que la sesión esté inactiva.
+- **Shell** — ejecutar un comando en el directorio del proyecto, con tiempo de espera.
+
+Cada paso tiene su propia política **al fallar**:
+
+- **stop** (por defecto) — terminar la ejecución y registrar el error
+- **continue** — registrar el error y seguir
+- **retry** — reintentar con retroceso exponencial, usando la configuración de reintentos del flujo
+
+Un **presupuesto** opcional (`max tokens`, `max attempts`) detiene la ejecución limpiamente con `budget_exhausted` en lugar de fallar a mitad de un paso. **Run** ejecuta un flujo de trabajo al instante; el registro de auditoría anota cada paso.
+
+## Reglas de aprobación automática
+
+Las reglas de **Policy** deciden qué pasa cuando el agente pide un permiso. Cada regla coincide por patrones de herramienta y contenido (`*` y `?` comodines). Gana la primera regla activa que coincida:
+
+- **accept** — aprobar automáticamente
+- **deny** — rechazar (retenido y marcado como denegado)
+- **hold** — dejártelo a ti, registrado en la bandeja de aprobaciones
+
+La política de automatización se ejecuta antes de la red de seguridad exterior; gana el primer veredicto no nulo.
+
+## Bandeja de aprobaciones
+
+Los permisos retenidos llegan a la bandeja de aprobaciones. Aprueba o rechaza uno a uno, o selecciona varios y resuélvelos en lote. Cada decisión responde a OpenCode para que el agente en espera continúe (o se detenga) al instante.
+
+## Registro de auditoría
+
+Cada ejecución añade una entrada: qué se disparó, el resultado de cada paso, los veredictos de política y las escalaciones. Las entradas solo se añaden y tienen un tope, así el registro nunca crece sin límite. Un fallo al escribir auditoría se registra como aviso y nunca hace fallar la ejecución que lo produjo.
+
+## Ten en cuenta
+
+- Los secretos de webhook nunca salen del servidor y no se muestran de nuevo tras guardar.
+- Los disparadores y flujos de trabajo solo se activan mientras el servidor Nova Code está en marcha.
+- Un disparador o flujo de trabajo defectuoso se omite al leer; nunca bloquea a los demás.
+
+## Relacionado
+
+- [Tareas programadas](/scheduled-tasks/) — ejecuta un prompt según un horario; una tarea fallida puede disparar una automatización
+- [Objetivos de sesión](/session-goals/) — haz que un prompt se complete
+- [Notificaciones](/notifications/) — entérate de las sesiones terminadas

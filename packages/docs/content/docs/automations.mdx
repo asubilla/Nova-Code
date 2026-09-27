@@ -1,0 +1,62 @@
+---
+title: Automations
+description: Run workflows when a webhook fires or a session event happens.
+---
+
+# Automations
+
+Automations connect triggers to multi-step workflows: a webhook or a project event starts a pipeline of prompts and shell commands, with auto-approve rules, budgets, retries, and an approval inbox. Set them up at **Settings → Nova Code → Automation**.
+
+## Triggers
+
+A trigger is what starts a workflow (or a scheduled task). Two kinds:
+
+- **Webhook** — an HTTP POST from outside Nova Code. You get a URL and a secret; send the secret as `X-Webhook-Secret`. Good for CI, cron on another machine, or a button in another tool.
+- **Event** — something that already happened here: a session finished, a session failed, or a scheduled task failed.
+
+Point each trigger at one workflow (or scheduled task), then save. **Fire** runs a trigger by hand so you can check the wiring before anything external calls it.
+
+## Workflows
+
+A workflow is an ordered list of steps. Each step is either:
+
+- **Prompt** — send a message to a session (create one or reuse an existing id), optionally wait until the session is idle.
+- **Shell** — run a command in the project directory, with a timeout.
+
+Each step has its own **on failure** policy:
+
+- **stop** (default) — end the run and record the error
+- **continue** — record the error and move on
+- **retry** — retry with exponential backoff, using the workflow's retry settings
+
+An optional **budget** (`max tokens`, `max attempts`) stops the run cleanly with `budget_exhausted` instead of failing mid-step. **Run** executes a workflow immediately; the audit log records every step.
+
+## Auto-approve rules
+
+Rules under **Policy** decide what happens when the agent asks for a permission. Each rule matches on tool and content patterns (`*` and `?` wildcards). The first matching enabled rule wins:
+
+- **accept** — auto-approve
+- **deny** — refuse (held and marked denied)
+- **hold** — leave it for you, journaled to the approval inbox
+
+Automation policy runs before the outer safety net; the first non-null verdict wins.
+
+## Approval inbox
+
+Held permissions land in the approval inbox. Approve or deny one at a time, or select many and resolve them in a batch. Each decision replies to OpenCode so the waiting agent continues (or stops) right away.
+
+## Audit log
+
+Every run appends an entry: what fired, each step's outcome, policy verdicts, and escalations. Entries are append-only and capped so the log never grows without bound. A failed audit write is logged as a warning and never fails the run that produced it.
+
+## Keep in mind
+
+- Webhook secrets never leave the server and are not shown again after save.
+- Triggers and workflows only fire while the Nova Code server is running.
+- One bad trigger or workflow is skipped on read; it never blocks the others.
+
+## Related
+
+- [Scheduled Tasks](/scheduled-tasks/) — run a prompt on a schedule; a failed task can trigger an automation
+- [Session Goals](/session-goals/) — pursue one prompt to completion
+- [Notifications](/notifications/) — hear about finished sessions
