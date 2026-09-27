@@ -20,6 +20,8 @@ jobs:
   build-macos-dmg-arm64-electron:
     name: Build Electron DMG (arm64, ${{ inputs.macos_version }})
     runs-on: ${{ inputs.macos_version }}
+    env:
+      HAS_APPLE_CERT: ${{ secrets.APPLE_CERTIFICATE != '' }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -52,6 +54,7 @@ jobs:
             opencode-cli-${{ runner.os }}-arm64-
 
       - name: Install Apple Certificate
+        if: ${{ env.HAS_APPLE_CERT == 'true' }}
         env:
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
@@ -79,6 +82,7 @@ jobs:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          CSC_IDENTITY_AUTO_DISCOVERY: ${{ env.HAS_APPLE_CERT }}
           ELECTRON_BUILDER_ARCH: arm64
         run: |
           bun run build:web-assets
