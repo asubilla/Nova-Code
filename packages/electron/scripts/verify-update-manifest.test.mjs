@@ -59,6 +59,21 @@ test('accepts electron-builder field ordering and optional blockMapSize', () => 
   }
 });
 
+test('accepts electron-builder GitHub safe artifact name with dashes', () => {
+  const artifactName = 'Nova Code-1.15.0-linux-x86_64.AppImage';
+  const bytes = Buffer.from(`artifact:${artifactName}`);
+  const value = fixture('latest-linux.yml', artifactName, [
+    `  - url: Nova-Code-1.15.0-linux-x86_64.AppImage`,
+    `    sha512: ${crypto.createHash('sha512').update(bytes).digest('base64')}`,
+    `    size: ${bytes.length}`,
+  ]);
+  try {
+    assert.equal(verifyUpdateManifest({ ...value, expectedVersion: '1.15.0' }).name, artifactName);
+  } finally {
+    fs.rmSync(value.root, { recursive: true, force: true });
+  }
+});
+
 test('rejects a manifest that points at the other architecture artifact', () => {
   const value = fixture('latest-linux-arm64.yml', 'Nova Code-1.15.0-linux-arm64.AppImage');
   try {

@@ -37,7 +37,10 @@ export const verifyUpdateManifest = ({ manifestPath, artifactPath, expectedVersi
     throw new Error(`Linux update manifest must contain exactly one artifact, got ${manifest.files.length}`);
   }
   const [entry] = manifest.files;
-  if (decodeURIComponent(path.basename(entry.url)) !== expectedName) {
+  const urlName = decodeURIComponent(path.basename(entry.url));
+  // GitHub publish replaces spaces with dashes in the manifest url (safe artifact name).
+  const safeName = expectedName.replace(/ /g, '-');
+  if (urlName !== expectedName && urlName !== safeName) {
     throw new Error(`Update manifest artifact mismatch: expected ${expectedName}, got ${entry.url}`);
   }
   const bytes = fs.readFileSync(artifactPath);
