@@ -1,0 +1,34 @@
+import React from 'react';
+import { getRegisteredRuntimeAPIs } from '@/contexts/runtimeAPIRegistry';
+import { isDesktopShell, isWebRuntime } from '@/lib/desktop';
+import { subscribeNovaCodeEvents } from '@/lib/novacodeEvents';
+import { useUIStore } from '@/stores/useUIStore';
+
+const isFocused = () => {
+  if (!globalThis.document) return true;
+  return document.visibilityState === 'visible' && document.hasFocus();
+};
+
+export const useWebNotificationStream = (options?: { enabled?: boolean }) => {
+  const enabled = options?.enabled ?? true;
+
+  React.useEffect(() => {
+    if (!enabled || isDesktopShell() || !isWebRuntime() || !globalThis.window) {
+      return;
+    }
+
+    // The control stream already belongs to this runtime and reconnects with it.
+    // A second EventSource consumed another HTTP/1.1 slot in every browser tab.
+    return subscribeNovaCodeEvents((event) => {
+      if (event.type !== 'notification') return;
+      const settings = useUIStore.getState();
+      if (!settings.nativeNotificationsEnabled) return;
+      if (settings.notificationMode !== 'always' && isFocused()) return;
+
+      // Keep the identity fields so the runtime API deduplicates this delivery
+      // against the same notification arriving through the main event WebSocket.
+      const apis = getRegisteredRuntimeAPIs();
+      void apis?.notifications?.notifyAgentCompletion(event.payload);
+    });
+  }, [enabled]);
+};
