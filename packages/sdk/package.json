@@ -6,7 +6,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/openchamber/openchamber.git",
+    "url": "git+https://github.com/asubilla/Nova-Code.git",
     "directory": "packages/sdk"
   },
   "type": "module",

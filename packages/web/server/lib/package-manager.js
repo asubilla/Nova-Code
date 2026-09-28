@@ -12,8 +12,8 @@ const __dirname = path.dirname(__filename);
 const PACKAGE_NAME = '@novacode/web';
 const PACKAGE_PATH_SEGMENTS = PACKAGE_NAME.split('/');
 const NPM_REGISTRY_URL = `https://registry.npmjs.org/${PACKAGE_NAME}`;
-const GITHUB_RELEASES_URL = 'https://github.com/openchamber/openchamber/releases';
-const GITHUB_RELEASES_API_URL = 'https://api.github.com/repos/openchamber/openchamber/releases';
+const GITHUB_RELEASES_URL = 'https://github.com/asubilla/Nova-Code/releases';
+const GITHUB_RELEASES_API_URL = 'https://api.github.com/repos/asubilla/Nova-Code/releases';
 let cachedDetectedPm = null;
 
 function getSpawnSyncBaseOptions() {

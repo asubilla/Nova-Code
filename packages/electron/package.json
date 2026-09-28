@@ -168,8 +168,8 @@
     },
     "publish": {
       "provider": "github",
-      "owner": "openchamber",
-      "repo": "openchamber"
+      "owner": "asubilla",
+      "repo": "Nova-Code"
     }
   }
 }

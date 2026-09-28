@@ -1,6 +1,6 @@
 # @novacode/sdk — developer API reference
 
-What third-party guest authors import and call. Source of truth: `[packages/sdk/src](https://github.com/openchamber/openchamber/tree/main/packages/sdk/src)`. Longer guides live in the [product docs](https://github.com/openchamber/openchamber/tree/main/packages/docs/content/docs) (`sdk.mdx`, `sdk/host.mdx`, `sdk/ui.mdx`) and in `[GUEST_SERVICES.md](https://github.com/openchamber/openchamber/blob/main/packages/sdk/GUEST_SERVICES.md)` for local services.
+What third-party guest authors import and call. Source of truth: `[packages/sdk/src](https://github.com/asubilla/Nova-Code/tree/main/packages/sdk/src)`. Longer guides live in the [product docs](https://github.com/asubilla/Nova-Code/tree/main/packages/docs/content/docs) (`sdk.mdx`, `sdk/host.mdx`, `sdk/ui.mdx`) and in `[GUEST_SERVICES.md](https://github.com/asubilla/Nova-Code/blob/main/packages/sdk/GUEST_SERVICES.md)` for local services.
 
 **Package:** `@novacode/sdk`  
 **API version:** manifest `apiVersion: 1`, wire envelope `v: 1`  
@@ -44,7 +44,7 @@ bunx openchamber-guest-bundle panel/main.ts panel/main.js
 bunx openchamber-guest-bundle --node service/main.ts service/main.js
 ```
 
-Zip or folder for install should include at least: `package.json`, `panel/index.html`, `panel/main.js`, and any declared `icon.svg` / `service/main.js`. Skip `node_modules` and TypeScript sources. Zip and git installs land in `{dataDir}/extensions/{id}`. See also `[GUEST_SERVICES.md](https://github.com/openchamber/openchamber/blob/main/packages/sdk/GUEST_SERVICES.md)`.
+Zip or folder for install should include at least: `package.json`, `panel/index.html`, `panel/main.js`, and any declared `icon.svg` / `service/main.js`. Skip `node_modules` and TypeScript sources. Zip and git installs land in `{dataDir}/extensions/{id}`. See also `[GUEST_SERVICES.md](https://github.com/asubilla/Nova-Code/blob/main/packages/sdk/GUEST_SERVICES.md)`.
 
 ---
 
@@ -435,7 +435,7 @@ Used by the Nova Code host and by tools that validate packages. Guests rarely ca
 | `tools`               | Optional, 1–16 entries that say how the extension's tool calls look in the chat. `match` is the full tool name OpenCode reports (`mcp.jira.search`, `jira_search`), 1–128 chars of `[A-Za-z0-9_.:-]`, with `*` allowed once at the end as a suffix wildcard (`mcp.jira.*`). Optional `name` (1–40, the header title when `title` is absent or renders empty), `icon` (Remixicon name or package `.svg` path, same rules as `panel.icon`; the SVG is drawn in the text colour at the glyph size), `title` / `subtitle` templates (1–200, `{input.path}` / `{output.path}` / `{metadata.path}` placeholders, a missing path renders empty, values are cut at 200), `output` `"auto"` (default) \| `"text"` \| `"json"` \| `"markdown"` \| `"code"` \| `"table"`, `language` (code only), `columns` (table only, 1–16 dotted paths; rows are the output array or `output.items`). Bad shape is `invalid-tools`. An exact `match` beats a wildcard from any extension; among equals the first extension wins. Only an enabled, fully approved extension's rules apply |
 | `filesystem`          | Optional, 1–16 globs, each 1–256 chars, starting with `/` or `~/`; `**` spans folders, `*` / `?` stay in one segment; no `..`, empty segment, or backslash (`invalid-filesystem`). Declaring it adds the `filesystem` capability and the dialog lists the globs |
 | `integration`         | Optional. Exactly one of `oauth`, `token`, or `host` (`provider: "linear"` only)                                                                                                     |
-| `service`               | Optional. `entry` must be a built `.js` file on disk. `provides: ["browser"]` makes it the agent's browser when the user selects it; `surface: true` gives it a host-drawn live panel the user can take over (no `panel.entry` then). Neither needs a panel or background entry. See [GUEST_SERVICES.md](https://github.com/openchamber/openchamber/blob/main/packages/sdk/GUEST_SERVICES.md) |
+| `service`               | Optional. `entry` must be a built `.js` file on disk. `provides: ["browser"]` makes it the agent's browser when the user selects it; `surface: true` gives it a host-drawn live panel the user can take over (no `panel.entry` then). Neither needs a panel or background entry. See [GUEST_SERVICES.md](https://github.com/asubilla/Nova-Code/blob/main/packages/sdk/GUEST_SERVICES.md) |
 
 
 Extra keys are dropped, not forwarded.
@@ -495,9 +495,9 @@ Panel → `serviceRequest` → host → `127.0.0.1:port` → service process →
 
 Manifest sketch: `service.entry` (path to **built** JS, e.g. `service/main.js`), `runtime: "host"`, `permissions.sockets` and/or `permissions.exec`. Install refuses with `missing-build` when that file is absent. Declaring a service adds `service` to the capabilities the user approves at install; until then `serviceRequest` is `NO_SERVICE`.
 
-A service with `provides: ["browser"]` answers the agent's `browser.*` actions at `POST /browser-control` instead of the desktop app's browser panel, once the user selects it in Settings → Nova Code Tools. The host starts it on the first action and stops it when idle. Parse the body with `readBrowserProviderRequest`; request and answer types (`BrowserProviderRequest`, `BrowserProviderResult`, per-action `Browser*Parameters` / `Browser*Data`) and the limits (`BROWSER_PROVIDER_*`) are exported from `@novacode/sdk`. Full contract in [GUEST_SERVICES.md](https://github.com/openchamber/openchamber/blob/main/packages/sdk/GUEST_SERVICES.md#browser-provider-provides-browser).
+A service with `provides: ["browser"]` answers the agent's `browser.*` actions at `POST /browser-control` instead of the desktop app's browser panel, once the user selects it in Settings → Nova Code Tools. The host starts it on the first action and stops it when idle. Parse the body with `readBrowserProviderRequest`; request and answer types (`BrowserProviderRequest`, `BrowserProviderResult`, per-action `Browser*Parameters` / `Browser*Data`) and the limits (`BROWSER_PROVIDER_*`) are exported from `@novacode/sdk`. Full contract in [GUEST_SERVICES.md](https://github.com/asubilla/Nova-Code/blob/main/packages/sdk/GUEST_SERVICES.md#browser-provider-provides-browser).
 
-A service with `surface: true` shows a live picture in the extension's rail panel: the host pulls frames from `GET /surface/frame`, draws them, sends the user's input to `POST /surface/input`, and owns who is in control (nobody, the agent, the user). Paths, event types, and the `readSurface*` parsers are exported from `@novacode/sdk`; contract in [GUEST_SERVICES.md](https://github.com/openchamber/openchamber/blob/main/packages/sdk/GUEST_SERVICES.md#shared-surface-surface-true).
+A service with `surface: true` shows a live picture in the extension's rail panel: the host pulls frames from `GET /surface/frame`, draws them, sends the user's input to `POST /surface/input`, and owns who is in control (nobody, the agent, the user). Paths, event types, and the `readSurface*` parsers are exported from `@novacode/sdk`; contract in [GUEST_SERVICES.md](https://github.com/asubilla/Nova-Code/blob/main/packages/sdk/GUEST_SERVICES.md#shared-surface-surface-true).
 
 Bundle the service with the Node target:
 
@@ -505,7 +505,7 @@ Bundle the service with the Node target:
 bunx openchamber-guest-bundle --node service/main.ts service/main.js
 ```
 
-Full contract (env vars, `/health`, grants, socket overrides): `[GUEST_SERVICES.md](https://github.com/openchamber/openchamber/blob/main/packages/sdk/GUEST_SERVICES.md)`.
+Full contract (env vars, `/health`, grants, socket overrides): `[GUEST_SERVICES.md](https://github.com/asubilla/Nova-Code/blob/main/packages/sdk/GUEST_SERVICES.md)`.
 
 ---
 
@@ -572,8 +572,8 @@ host.onReady((ctx) => {
 
 | File                                                                                                                                                                                                                                                                                                                      | Audience                          |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------- |
-| [README.md](https://github.com/openchamber/openchamber/blob/main/packages/sdk/README.md)                                                                                                                                                                                                                                   | Package overview and first hole   |
-| [DOCUMENTATION.md](https://github.com/openchamber/openchamber/blob/main/packages/sdk/DOCUMENTATION.md)                                                                                                                                                                                                                     | Agent / maintainer invariants     |
-| [GUEST_SERVICES.md](https://github.com/openchamber/openchamber/blob/main/packages/sdk/GUEST_SERVICES.md)                                                                                                                                                                                                                       | Local service contract              |
-| [src/ui/DOCUMENTATION.md](https://github.com/openchamber/openchamber/blob/main/packages/sdk/src/ui/DOCUMENTATION.md)                                                                                                                                                                                                       | UI kit invariants                 |
-| [sdk.mdx](https://github.com/openchamber/openchamber/blob/main/packages/docs/content/docs/sdk.mdx) / [sdk/host.mdx](https://github.com/openchamber/openchamber/blob/main/packages/docs/content/docs/sdk/host.mdx) / [sdk/ui.mdx](https://github.com/openchamber/openchamber/blob/main/packages/docs/content/docs/sdk/ui.mdx) | Author-facing website pages       |
+| [README.md](https://github.com/asubilla/Nova-Code/blob/main/packages/sdk/README.md)                                                                                                                                                                                                                                   | Package overview and first hole   |
+| [DOCUMENTATION.md](https://github.com/asubilla/Nova-Code/blob/main/packages/sdk/DOCUMENTATION.md)                                                                                                                                                                                                                     | Agent / maintainer invariants     |
+| [GUEST_SERVICES.md](https://github.com/asubilla/Nova-Code/blob/main/packages/sdk/GUEST_SERVICES.md)                                                                                                                                                                                                                       | Local service contract              |
+| [src/ui/DOCUMENTATION.md](https://github.com/asubilla/Nova-Code/blob/main/packages/sdk/src/ui/DOCUMENTATION.md)                                                                                                                                                                                                       | UI kit invariants                 |
+| [sdk.mdx](https://github.com/asubilla/Nova-Code/blob/main/packages/docs/content/docs/sdk.mdx) / [sdk/host.mdx](https://github.com/asubilla/Nova-Code/blob/main/packages/docs/content/docs/sdk/host.mdx) / [sdk/ui.mdx](https://github.com/asubilla/Nova-Code/blob/main/packages/docs/content/docs/sdk/ui.mdx) | Author-facing website pages       |

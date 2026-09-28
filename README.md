@@ -1,7 +1,7 @@
 # <picture><source media="(prefers-color-scheme: dark)" srcset="docs/references/badges/novacode-logo-dark.svg"><img src="docs/references/badges/novacode-logo-light.svg" width="32" height="32" align="absmiddle" /></picture> Nova Code
 
-[![GitHub stars](https://img.shields.io/github/stars/openchamber/openchamber?style=flat&labelColor=100F0F&color=66800B)](https://github.com/openchamber/openchamber/stargazers)
-[![GitHub release](https://img.shields.io/github/v/release/openchamber/openchamber?style=flat&labelColor=100F0F&color=205EA6)](https://github.com/openchamber/openchamber/releases/latest)
+[![GitHub stars](https://img.shields.io/github/stars/asubilla/Nova-Code?style=flat&labelColor=100F0F&color=66800B)](https://github.com/asubilla/Nova-Code/stargazers)
+[![GitHub release](https://img.shields.io/github/v/release/asubilla/Nova-Code?style=flat&labelColor=100F0F&color=205EA6)](https://github.com/asubilla/Nova-Code/releases/latest)
 [![Discord](https://img.shields.io/badge/Discord-join.svg?style=flat&labelColor=100F0F&color=8B7EC8&logo=discord&logoColor=FFFCF0)](https://discord.gg/ZYRSdnwwKA)
 [![Support the project](https://img.shields.io/badge/Support-Project-black?style=flat&labelColor=100F0F&color=EC8B49&logo=patreon&logoColor=FFFCF0)](https://www.patreon.com/openchamber)
 
@@ -77,7 +77,7 @@ Run a prompt once, daily, weekly, or on a cron schedule. Scheduled tasks can use
 
 ### Desktop for macOS, Windows, and Linux
 
-Download the latest release from [GitHub Releases](https://github.com/openchamber/openchamber/releases/latest). Desktop bundles the matching OpenCode CLI, so no separate OpenCode installation is required.
+Download the latest release from [GitHub Releases](https://github.com/asubilla/Nova-Code/releases/latest). Desktop bundles the matching OpenCode CLI, so no separate OpenCode installation is required.
 
 Linux releases are available as x86_64 and ARM64 AppImages. Make the downloaded AppImage executable and keep it in a writable location for in-app updates:
 
@@ -97,7 +97,7 @@ Install [Nova Code from the Visual Studio Marketplace](https://marketplace.visua
 Requires Node.js 22+. CLI/Web and VS Code use your installed [OpenCode CLI](https://opencode.ai).
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/openchamber/openchamber/main/scripts/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/asubilla/Nova-Code/main/scripts/install.sh | bash
 nova --ui-password be-creative-here
 ```
 
@@ -144,9 +144,9 @@ Nova Code is an independent project and is not affiliated with the OpenCode team
 
 ## Contributing
 
-Bug fixes and small improvements are welcome as PRs. Features and behavior changes start in an [Ideas discussion](https://github.com/openchamber/openchamber/discussions/categories/ideas) so we agree on the product side before anyone writes code. Read [CONTRIBUTING.md](./CONTRIBUTING.md) before opening a PR; it has the setup, the review contract, and what happens to large unplanned PRs. Documentation authoring guidance lives in [`packages/docs`](packages/docs/README.md).
+Bug fixes and small improvements are welcome as PRs. Features and behavior changes start in an [Ideas discussion](https://github.com/asubilla/Nova-Code/discussions/categories/ideas) so we agree on the product side before anyone writes code. Read [CONTRIBUTING.md](./CONTRIBUTING.md) before opening a PR; it has the setup, the review contract, and what happens to large unplanned PRs. Documentation authoring guidance lives in [`packages/docs`](packages/docs/README.md).
 
-Bugs go to [issues](https://github.com/openchamber/openchamber/issues/new/choose). Questions go to [Q&A discussions](https://github.com/openchamber/openchamber/discussions/categories/q-a).
+Bugs go to [issues](https://github.com/asubilla/Nova-Code/issues/new/choose). Questions go to [Q&A discussions](https://github.com/asubilla/Nova-Code/discussions/categories/q-a).
 
 ## Acknowledgments
 

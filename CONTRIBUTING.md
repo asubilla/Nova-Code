@@ -7,7 +7,7 @@ merged, and a typical merged PR is around 200 lines.
 
 New features, changes to how something behaves for users, or reworks of how a
 module is put together: start an
-[Ideas discussion](https://github.com/openchamber/openchamber/discussions/categories/ideas)
+[Ideas discussion](https://github.com/asubilla/Nova-Code/discussions/categories/ideas)
 first, and start it before the code. Say what you were trying to do, what got
 in your way, and what you'd want instead, in your own words. A screenshot or a
 rough mockup helps more than a specification.
@@ -53,7 +53,7 @@ reviewed first; a PR that mixes unrelated fixes waits for the largest of them.
 ## Getting Started
 
 ```bash
-git clone https://github.com/openchamber/openchamber.git
+git clone https://github.com/asubilla/Nova-Code.git
 cd openchamber
 bun install
 ```
@@ -197,7 +197,7 @@ without reconstructing the contributor's work.
 Before opening a pull request:
 
 1. For anything that is not a bug fix or a small improvement, make sure the
-   [Ideas discussion](https://github.com/openchamber/openchamber/discussions/categories/ideas)
+   [Ideas discussion](https://github.com/asubilla/Nova-Code/discussions/categories/ideas)
    happened first, that a maintainer said go ahead, and link it. Opening one
    after the implementation, to describe what you already built, closes the
    post and this pull request with it; opening the pull request without the
@@ -353,9 +353,9 @@ You can still help:
 
 - Report bugs. Even "this felt confusing" is useful. Write issues in English (machine translation is fine); reports in other languages wait until someone translates them
 - Test on different devices, browsers, or OS versions
-- Suggest features in [Ideas discussions](https://github.com/openchamber/openchamber/discussions/categories/ideas). The issue tracker is for bugs only
-- Answer questions in [Q&A discussions](https://github.com/openchamber/openchamber/discussions/categories/q-a)
+- Suggest features in [Ideas discussions](https://github.com/asubilla/Nova-Code/discussions/categories/ideas). The issue tracker is for bugs only
+- Answer questions in [Q&A discussions](https://github.com/asubilla/Nova-Code/discussions/categories/q-a)
 
 ## Questions?
 
-Open a [Q&A discussion](https://github.com/openchamber/openchamber/discussions/categories/q-a).
+Open a [Q&A discussion](https://github.com/asubilla/Nova-Code/discussions/categories/q-a).

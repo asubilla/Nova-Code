@@ -170,7 +170,7 @@ Where that decision is settled depends on who is working:
   The decision already happened off GitHub; no discussion thread and no link is
   expected on the pull request.
 - **Working as an outside contributor**: the decision happens in an agreed
-  [Ideas discussion](https://github.com/openchamber/openchamber/discussions/categories/ideas)
+  [Ideas discussion](https://github.com/asubilla/Nova-Code/discussions/categories/ideas)
   before the code, linked from the pull request. Without the maintainer's
   go-ahead such a pull request is not reviewed, and a discussion opened
   afterwards to describe finished work is closed along with it.

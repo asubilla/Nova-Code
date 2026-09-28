@@ -156,10 +156,10 @@ describe('checkForUpdates', () => {
         json: async () => ({
           latestVersion: '1.10.0',
           updateAvailable: true,
-          downloadUrl: 'https://github.com/openchamber/openchamber/releases/download/v1.10.0/Nova Code-1.10.0-42-android.aab',
+          downloadUrl: 'https://github.com/asubilla/Nova-Code/releases/download/v1.10.0/Nova Code-1.10.0-42-android.aab',
         }),
       })
-      .when('api.github.com/repos/openchamber/openchamber/releases/tags/v1.10.0', {
+      .when('api.github.com/repos/asubilla/Nova-Code/releases/tags/v1.10.0', {
         ok: true,
         json: async () => ({
           assets: [
@@ -189,7 +189,7 @@ describe('checkForUpdates', () => {
   });
 
   it('keeps a direct Android APK URL from the update API', async () => {
-    const apkUrl = 'https://github.com/openchamber/openchamber/releases/download/v1.10.0/Nova Code-1.10.0-42-android.apk';
+    const apkUrl = 'https://github.com/asubilla/Nova-Code/releases/download/v1.10.0/Nova Code-1.10.0-42-android.apk';
     fetchMock.when('api.openchamber.dev', {
       ok: true,
       json: async () => ({
