@@ -3,6 +3,12 @@ import { TUNNEL_PARSE_BASE } from './relay/tunnel-payloads';
 import { buildRuntimeAuthHeaders } from './runtime-auth';
 import { observeRuntimeAuthResponse } from './runtime-auth-expiry';
 import { getRuntimeUrlResolver, type RuntimeUrlQuery } from './runtime-url';
+import {
+  attemptInstanceFailover,
+  canAttemptInstanceFailover,
+  isFailoverTriggerStatus,
+  isTransientRestartResponse,
+} from './instance-failover';
 
 export interface RuntimeFetchOptions extends RequestInit {
   query?: RuntimeUrlQuery;
@@ -257,69 +263,142 @@ const coalesceReadKey = (method: string, url: string, hasSignal: boolean): strin
   return `GET ${url}`;
 };
 
+const isRuntimeServiceUrl = (rawUrl: string): boolean => {
+  try {
+    return isActiveRuntimeServiceUrl(new URL(rawUrl));
+  } catch {
+    return false;
+  }
+};
+
+// A Request body cannot be replayed once the first attempt consumed it, so a
+// request carrying one is retried from an untouched clone taken up front.
+const sourceForFailoverRetry = (input: string | URL | Request): string | URL | Request | null => {
+  if (input instanceof Request && input.body && !input.bodyUsed) {
+    try {
+      return input.clone();
+    } catch {
+      // A locked body means no retry — the first attempt still runs normally.
+      return null;
+    }
+  }
+  return input;
+};
+
 export const runtimeFetch = async (input: string | URL | Request, init: RuntimeFetchOptions = {}): Promise<Response> => {
   const { query, ...requestInit } = init;
 
-  // Resolve the transport once — relay tunnel or network — then apply the SAME
-  // read-coalescing to both. On a relay the tunnel is bandwidth/latency-bound, so
-  // deduping concurrent identical GETs matters there most.
-  const relay = getActiveRelayTunnel();
-  const relayPath = relay ? extractRelayPath(input, query) : null;
+  // Failover gets exactly one retry, and only from the first attempt. A relay
+  // transport is an E2EE tunnel, not an address, so it never fails over.
+  const relayOnEntry = getActiveRelayTunnel();
+  const failoverRetrySource = !relayOnEntry && canAttemptInstanceFailover()
+    ? sourceForFailoverRetry(input)
+    : null;
 
-  let doFetch: () => Promise<Response>;
-  let url: string;
-  let method: string;
-  if (relay && relayPath !== null) {
-    const inputHeaders = input instanceof Request ? input.headers : undefined;
-    const headers = await mergeHeaders(inputHeaders, requestInit.headers, true);
-    doFetch = input instanceof Request
-      ? () => relay.fetch(input, { ...requestInit, headers })
-      : () => relay.fetch(relayPath, { ...requestInit, headers });
-    url = relayPath;
-    method = String(requestInit.method ?? (input instanceof Request ? input.method : 'GET')).toUpperCase();
-  } else {
-    const resolvedInput = resolveRuntimeFetchInput(input, query);
-    const inputHeaders = resolvedInput instanceof Request ? resolvedInput.headers : undefined;
-    const headers = await mergeHeaders(inputHeaders, requestInit.headers, shouldAttachRuntimeAuth(resolvedInput));
-    const resolvedUrl =
-      resolvedInput instanceof Request ? resolvedInput.url
-      : resolvedInput instanceof URL ? resolvedInput.toString()
-      : String(resolvedInput);
-    addRuntimeProxyHeaders(resolvedUrl, headers);
-    doFetch = resolvedInput instanceof Request
-      ? () => fetch(new Request(resolvedInput, { ...requestInit, headers }))
-      : () => fetch(resolvedInput, { ...requestInit, headers });
-    url = resolvedUrl;
-    method = String(
-      requestInit.method ?? (resolvedInput instanceof Request ? resolvedInput.method : 'GET'),
-    ).toUpperCase();
-  }
+  const attemptFetch = async (source: string | URL | Request, attempt: number): Promise<Response> => {
+    // Resolve the transport once — relay tunnel or network — then apply the SAME
+    // read-coalescing to both. On a relay the tunnel is bandwidth/latency-bound, so
+    // deduping concurrent identical GETs matters there most.
+    const relay = getActiveRelayTunnel();
+    const relayPath = relay ? extractRelayPath(source, query) : null;
+    const failoverEligible = !relay && relayPath === null && attempt === 0 && failoverRetrySource !== null;
 
-  // Session-expiry classification rides on responses that already flow
-  // through here; only the status is read, never the body.
-  const rawFetch = doFetch;
-  doFetch = () => rawFetch().then((response) => {
-    observeRuntimeAuthResponse(url, response.status);
-    return response;
-  });
+    let doFetch: () => Promise<Response>;
+    let url: string;
+    let method: string;
+    if (relay && relayPath !== null) {
+      const inputHeaders = source instanceof Request ? source.headers : undefined;
+      const headers = await mergeHeaders(inputHeaders, requestInit.headers, true);
+      doFetch = source instanceof Request
+        ? () => relay.fetch(source, { ...requestInit, headers })
+        : () => relay.fetch(relayPath, { ...requestInit, headers });
+      url = relayPath;
+      method = String(requestInit.method ?? (source instanceof Request ? source.method : 'GET')).toUpperCase();
+    } else {
+      const resolvedInput = resolveRuntimeFetchInput(source, query);
+      const inputHeaders = resolvedInput instanceof Request ? resolvedInput.headers : undefined;
+      const headers = await mergeHeaders(inputHeaders, requestInit.headers, shouldAttachRuntimeAuth(resolvedInput));
+      const resolvedUrl =
+        resolvedInput instanceof Request ? resolvedInput.url
+        : resolvedInput instanceof URL ? resolvedInput.toString()
+        : String(resolvedInput);
+      addRuntimeProxyHeaders(resolvedUrl, headers);
+      doFetch = resolvedInput instanceof Request
+        ? () => fetch(new Request(resolvedInput, { ...requestInit, headers }))
+        : () => fetch(resolvedInput, { ...requestInit, headers });
+      url = resolvedUrl;
+      method = String(
+        requestInit.method ?? (resolvedInput instanceof Request ? resolvedInput.method : 'GET'),
+      ).toUpperCase();
+    }
 
-  // A Request always carries a (possibly default) signal; treat any Request, or
-  // an explicit init.signal, as "has signal" and skip coalescing for safety.
-  const hasSignal = requestInit.signal != null || input instanceof Request;
+    // Session-expiry classification rides on responses that already flow
+    // through here; only the status is read, never the body.
+    const rawFetch = doFetch;
+    doFetch = () => rawFetch().then((response) => {
+      observeRuntimeAuthResponse(url, response.status);
+      return response;
+    });
 
-  const key = coalesceReadKey(method, url, hasSignal);
-  if (!key) return doFetch();
+    // Transport-level failure of a request aimed at the active runtime means
+    // the instance itself is gone: probe the pool, move the runtime, and run
+    // this request once more against the instance that answered.
+    const shouldRetryAfter = async (response: Response | null): Promise<boolean> => {
+      if (!failoverEligible || !isRuntimeServiceUrl(url)) return false;
+      if (response && !isFailoverTriggerStatus(response.status)) return false;
+      // The local backend booting (503 + restarting) heals on its own —
+      // switching instances over it would move a perfectly good session.
+      if (response && await isTransientRestartResponse(response)) return false;
+      return attemptInstanceFailover();
+    };
 
-  const existing = READ_COALESCE.get(key);
-  if (existing) return existing.then((res) => res.clone());
+    const execute = async (): Promise<Response> => {
+      try {
+        const response = await doFetch();
+        if (await shouldRetryAfter(response)) {
+          try {
+            await response.body?.cancel();
+          } catch {
+            // The failed body is being discarded either way.
+          }
+          return attemptFetch(failoverRetrySource!, attempt + 1);
+        }
+        return response;
+      } catch (error) {
+        const aborted = (requestInit.signal?.aborted === true)
+          || (source instanceof Request && source.signal.aborted)
+          || (error instanceof Error && error.name === 'AbortError');
+        if (aborted || !(error instanceof Error)) throw error;
+        if (await shouldRetryAfter(null)) {
+          return attemptFetch(failoverRetrySource!, attempt + 1);
+        }
+        throw error;
+      }
+    };
 
-  const pending = doFetch();
-  READ_COALESCE.set(key, pending);
-  pending.then(
-    () => READ_COALESCE.delete(key),
-    () => READ_COALESCE.delete(key),
-  );
-  return pending.then((res) => res.clone());
+    // A Request always carries a (possibly default) signal; treat any Request, or
+    // an explicit init.signal, as "has signal" and skip coalescing for safety.
+    const hasSignal = requestInit.signal != null || source instanceof Request;
+
+    // Only the first attempt joins the coalescing map: a failover retry runs
+    // *inside* the entry its own attempt 0 registered, so looking the key up
+    // again would wait on the very promise that is waiting on it.
+    const key = attempt === 0 ? coalesceReadKey(method, url, hasSignal) : null;
+    if (!key) return execute();
+
+    const existing = READ_COALESCE.get(key);
+    if (existing) return existing.then((res) => res.clone());
+
+    const pending = execute();
+    READ_COALESCE.set(key, pending);
+    pending.then(
+      () => READ_COALESCE.delete(key),
+      () => READ_COALESCE.delete(key),
+    );
+    return pending.then((res) => res.clone());
+  };
+
+  return attemptFetch(input, 0);
 };
 
 let runtimeFetchBridgeInstalled = false;

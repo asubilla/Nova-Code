@@ -10,6 +10,7 @@ import {
   type HostProbeResult,
 } from '@/lib/desktopHosts';
 import { LOCAL_HOST_ID, buildLocalDesktopHost } from '@/lib/desktopCurrentHost';
+import { mergeDiscoveredInstances } from '@/lib/instancePool';
 
 export type DesktopHostStatus = {
   status: HostProbeResult['status'];
@@ -179,7 +180,10 @@ let warmUpStarted = false;
 export const warmDesktopHostStatuses = async (): Promise<void> => {
   if (warmUpStarted || !isDesktopShell()) return;
   warmUpStarted = true;
-  const config = await desktopHostsGet().catch(() => null);
+  // Fold in whatever local servers the scan found first, so this warm-up also
+  // covers the auto-discovered pool failover will use.
+  const config = (await mergeDiscoveredInstances().catch(() => null))
+    ?? await desktopHostsGet().catch(() => null);
   if (!config) return;
   pruneDesktopHostStatuses(config.hosts.map((host) => host.id));
   await probeDesktopHosts([buildLocalDesktopHost(config.localOrigin), ...config.hosts]);

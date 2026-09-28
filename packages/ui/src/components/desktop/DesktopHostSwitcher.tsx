@@ -47,6 +47,7 @@ import {
   type DesktopHostStatus,
 } from '@/lib/desktopHostStatus';
 import { scheduleDesktopHostCandidateRefresh } from '@/lib/desktopRelayRestore';
+import { mergeDiscoveredInstances } from '@/lib/instancePool';
 import { adoptRelayTunnel } from '@/lib/relay/runtime-tunnel';
 import { createRelayTunnelClient } from '@/lib/relay/tunnel-client';
 import { subscribeRuntimeEndpointChanged, switchRuntimeEndpoint } from '@/lib/runtime-switch';
@@ -283,6 +284,12 @@ export function DesktopHostSwitcherDialog({
   const [editLabel, setEditLabel] = React.useState('');
   const [editUrl, setEditUrl] = React.useState('');
 
+  // Inline "Add instance": probe → persist, without a detour to Settings.
+  const [adding, setAdding] = React.useState(false);
+  const [addLabel, setAddLabel] = React.useState('');
+  const [addUrl, setAddUrl] = React.useState('');
+  const [isAdding, setIsAdding] = React.useState(false);
+
   const [runtimeEndpointEpoch, setRuntimeEndpointEpoch] = React.useState(0);
   const sshSwitchTokenRef = React.useRef(0);
 
@@ -336,7 +343,9 @@ export function DesktopHostSwitcherDialog({
     setError('');
     try {
       const [cfg, sshCfg, sshStatusMap] = await Promise.all([
-        desktopHostsGet(),
+        // Merge whatever local servers the port scan found before reading, so
+        // the list (and every later probe/failover) includes the discovered pool.
+        mergeDiscoveredInstances().catch(() => null).then((merged) => merged ?? desktopHostsGet()),
         desktopSshInstancesGet().catch(() => ({ instances: [] })),
         getSshStatusById(),
       ]);
@@ -375,6 +384,9 @@ export function DesktopHostSwitcherDialog({
       setEditingId(null);
       setEditLabel('');
       setEditUrl('');
+      setAdding(false);
+      setAddLabel('');
+      setAddUrl('');
       setSwitchingHostId(null);
       setSshSwitchModal({ open: false, hostId: null, hostLabel: '', phase: 'idle', detail: null, error: null });
       setError('');
@@ -640,6 +652,52 @@ export function DesktopHostSwitcherDialog({
       window.location.assign(resolved.redeemUrl);
     }
   }, [cancelEdit, configHosts, defaultHostId, editLabel, editUrl, editingId, persist, t]);
+
+  const cancelAdd = React.useCallback(() => {
+    setAdding(false);
+    setAddLabel('');
+    setAddUrl('');
+  }, []);
+
+  const commitAdd = React.useCallback(async () => {
+    const resolved = resolveDesktopHostUrl(addUrl);
+    if (!resolved) {
+      setError(t('desktopHostSwitcher.error.invalidUrl'));
+      return;
+    }
+    const url = resolved.persistedUrl;
+    const apiOrigin = normalizeHostUrl(url) || url;
+    setIsAdding(true);
+    setError('');
+    try {
+      // Probe before saving: an address that isn't a reachable Nova Code server
+      // would only ever render as a dead row, so it is reported instead.
+      const probe = await desktopHostProbe(apiOrigin)
+        .catch((): HostProbeResult => ({ status: 'unreachable', latencyMs: 0 }));
+      if (probe.status === 'wrong-service' || probe.status === 'unreachable' || probe.status === 'incompatible') {
+        setError(t('desktopHostSwitcher.add.error', { status: t(statusLabelKey(probe.status)) }));
+        return;
+      }
+
+      const id = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+        ? crypto.randomUUID()
+        : `host-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+      const label = addLabel.trim() || redactSensitiveUrl(url);
+      const nextHosts: DesktopHost[] = [{ id, label, url, apiUrl: url }, ...configHosts];
+      await desktopHostsSet({ hosts: nextHosts, defaultHostId });
+      setConfigHosts(nextHosts);
+      setDesktopHostStatus(id, { status: probe.status, latencyMs: probe.latencyMs });
+      toast.success(t('desktopHostSwitcher.add.success', { host: redactSensitiveUrl(label) }));
+      cancelAdd();
+      if (resolved.redeemUrl) {
+        window.location.assign(resolved.redeemUrl);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('desktopHostSwitcher.error.failedToSave'));
+    } finally {
+      setIsAdding(false);
+    }
+  }, [addLabel, addUrl, cancelAdd, configHosts, defaultHostId, t]);
 
   const setDefault = React.useCallback(async (id: string) => {
     const next = id === LOCAL_HOST_ID ? LOCAL_HOST_ID : id;
@@ -1020,14 +1078,63 @@ export function DesktopHostSwitcherDialog({
         )}
 
         <div className="flex-shrink-0 border-t border-[var(--interactive-border)]">
-          <button
-            type="button"
-            className="w-full flex items-center gap-2 px-2 py-2 text-left text-muted-foreground hover:text-foreground hover:bg-interactive-hover/30 transition-colors"
-            onClick={openRemoteInstancesSettings}
-          >
-            <Icon name="add" className="h-4 w-4" />
-            <span className="typography-ui-label">{t('desktopHostSwitcher.actions.addInstance')}</span>
-          </button>
+          {adding && desktopAvailable ? (
+            <div className="space-y-2 p-2">
+              <div className="flex items-center justify-between gap-2">
+                <div className="typography-ui-label font-medium text-foreground">{t('desktopHostSwitcher.add.title')}</div>
+                <button
+                  type="button"
+                  className="typography-meta text-muted-foreground hover:text-foreground underline-offset-2 hover:underline"
+                  onClick={openRemoteInstancesSettings}
+                >
+                  {t('desktopHostSwitcher.add.manage')}
+                </button>
+              </div>
+              <div className="typography-meta text-muted-foreground">{t('desktopHostSwitcher.add.hint')}</div>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <Input
+                  value={addLabel}
+                  onChange={(e) => setAddLabel(e.target.value)}
+                  onKeyDown={stopDropdownTypeahead}
+                  placeholder={t('desktopHostSwitcher.field.labelPlaceholder')}
+                  disabled={isAdding}
+                />
+                <Input
+                  value={addUrl}
+                  onChange={(e) => setAddUrl(e.target.value)}
+                  onKeyDown={(e) => {
+                    stopDropdownTypeahead(e);
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      void commitAdd();
+                    }
+                  }}
+                  placeholder={t('desktopHostSwitcher.field.urlPlaceholder')}
+                  disabled={isAdding}
+                  autoFocus
+                />
+              </div>
+              <div className="flex items-center justify-end gap-2">
+                <Button type="button" variant="outline" size="sm" onClick={cancelAdd} disabled={isAdding}>
+                  {t('desktopHostSwitcher.actions.cancel')}
+                </Button>
+                <Button type="button" size="sm" onClick={() => void commitAdd()} disabled={isAdding || !addUrl.trim()}>
+                  {isAdding ? <Icon name="loader-4" className="h-4 w-4 animate-spin" /> : null}
+                  {t('desktopHostSwitcher.actions.add')}
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              className="w-full flex items-center gap-2 px-2 py-2 text-left text-muted-foreground hover:text-foreground hover:bg-interactive-hover/30 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+              onClick={() => setAdding(true)}
+              disabled={!desktopAvailable}
+            >
+              <Icon name="add" className="h-4 w-4" />
+              <span className="typography-ui-label">{t('desktopHostSwitcher.actions.addInstance')}</span>
+            </button>
+          )}
         </div>
 
         {error && (

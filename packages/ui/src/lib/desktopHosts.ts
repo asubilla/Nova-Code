@@ -51,6 +51,8 @@ export type DesktopHost = {
   requestHeaders?: Record<string, string>;
   /** When set, this host is reached over the private relay tunnel. */
   relay?: DesktopHostRelay;
+  /** Auto-discovered loopback instance (found by the local scan, not typed in). */
+  auto?: boolean;
 };
 
 /** Display-only pseudo-URL for a relay host (never fetched). */
@@ -331,6 +333,7 @@ const parseHost = (value: unknown): DesktopHost | null => {
     ...(clientToken ? { clientToken } : {}),
     ...(requestHeaders ? { requestHeaders } : {}),
     ...(relay ? { relay } : {}),
+    ...(value.auto === true ? { auto: true } : {}),
   };
 };
 

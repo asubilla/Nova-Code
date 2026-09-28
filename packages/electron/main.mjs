@@ -54,6 +54,7 @@ import {
 import { sanitizeRuntimeRequestHeaders } from './runtime-request-headers.mjs';
 import { probeDirectHostWithRetry } from './host-probe-policy.mjs';
 import { probeElectronHostWithDeadline } from './electron-host-probe.mjs';
+import { discoverLocalInstances } from './instance-discovery.mjs';
 import { assertUpdaterCapability } from './updater-capability.mjs';
 import { checkForDesktopUpdate } from './updater-check.mjs';
 import { resolveUpdaterChannel } from './updater-channel.mjs';
@@ -723,13 +724,17 @@ const buildStoredHostEntry = (entry) => {
   const relayField = relay ? { relay } : {};
   const directUrl = sanitizeHostUrlForStorage(entry?.url);
   const apiUrl = directUrl ? (sanitizeHostUrlForStorage(entry?.apiUrl) || directUrl) : null;
+  // Auto-discovered instances keep their marker so the UI can tell a
+  // machine-found server apart from one the user typed in (rediscovery,
+  // dismissal bookkeeping, row labelling).
+  const autoField = entry?.auto === true ? { auto: true } : {};
 
   if (directUrl) {
-    return { id, label: labelRaw || directUrl, url: directUrl, apiUrl, ...tokenField, ...headerFields, ...relayField };
+    return { id, label: labelRaw || directUrl, url: directUrl, apiUrl, ...tokenField, ...headerFields, ...relayField, ...autoField };
   }
   if (relay) {
     const url = `relay://${relay.serverId}`;
-    return { id, label: labelRaw || url, url, ...tokenField, ...headerFields, relay };
+    return { id, label: labelRaw || url, url, ...tokenField, ...headerFields, relay, ...autoField };
   }
   return null;
 };
@@ -4098,6 +4103,12 @@ const handleInvoke = async (browserWindow, command, args = {}) => {
         args.requestHeaders || {},
         String(args.expectedServerId || ''),
       ));
+
+    // Loopback scan for Nova Code / OpenCode servers so the switcher can grow
+    // its pool without the user typing every address. Pure read: nothing is
+    // persisted here — the renderer decides what to keep.
+    case 'desktop_instances_discover':
+      return discoverLocalInstances();
 
     case 'desktop_remote_password_login':
       return loginRemoteAndIssueClientToken({
