@@ -33,7 +33,7 @@ read. Skill loading is a required part of the task, not optional guidance.
 
 Shared UI calls official OpenCode APIs through `@opencode-ai/sdk/v2`. Nova Code-owned capabilities use `RuntimeAPIs`, `runtimeFetch`, and shared browser/realtime transport helpers. Server-side upstream integrations may use their owning runtime modules.
 
-Electron starts the Nova Code backend in-process, never as a sidecar. Development may load loopback/HMR UI; packaged builds load staged assets through `openchamber-ui://` while the loopback server remains the API backend. Keep domain backends in web/runtime modules unless behavior is inherently native.
+Electron starts the Nova Code backend in-process, never as a sidecar. Development may load loopback/HMR UI; packaged builds load staged assets through `novacode-ui://` while the loopback server remains the API backend. Keep domain backends in web/runtime modules unless behavior is inherently native.
 
 Shared contracts must define intentional behavior for every applicable runtime: web, desktop, VS Code, hosted mobile, and Capacitor mobile.
 

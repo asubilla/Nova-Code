@@ -39,7 +39,8 @@ const currentOrigin = (() => {
   }
 })();
 const isLocalPage = currentOrigin !== 'null'
-  && (currentOrigin === 'openchamber-ui://app'
+  && (currentOrigin === 'novacode-ui://app'
+  || currentOrigin === 'openchamber-ui://app'
   || (localOrigin && currentOrigin === localOrigin));
 
 // Remote pages need __NOVACODE_LOCAL_ORIGIN__ so the HostSwitcher knows

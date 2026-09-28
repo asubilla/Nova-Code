@@ -1921,6 +1921,7 @@ async function main(options = {}) {
   const app = express();
   const serverStartedAt = new Date().toISOString();
   const packagedClientOrigins = new Set([
+    'novacode-ui://app',
     'openchamber-ui://app',
     'capacitor://localhost',
     'http://localhost',
@@ -1945,9 +1946,10 @@ async function main(options = {}) {
       res.setHeader('Access-Control-Allow-Origin', origin);
       res.setHeader('Access-Control-Allow-Credentials', 'true');
       res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
-      // The packaged desktop UI (openchamber-ui://) and the dev UI sit on a
-      // different origin, so every custom request header must be listed here or
-      // the browser refuses the request at preflight, before it reaches a route.
+      // The packaged desktop UI (novacode-ui://, plus the legacy
+      // openchamber-ui://) and the dev UI sit on a different origin, so every
+      // custom request header must be listed here or the browser refuses the
+      // request at preflight, before it reaches a route.
       res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization,Accept,X-Requested-With,Cache-Control,X-OpenCode-Directory,X-OpenCode-Directory-Encoding,Ngrok-Skip-Browser-Warning,X-Nova Code-Surface');
       res.setHeader('Access-Control-Expose-Headers', 'x-next-cursor');
       res.setHeader('Vary', 'Origin');

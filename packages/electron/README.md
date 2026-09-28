@@ -18,7 +18,7 @@ lock, and the first window. On `ready` it creates the main window on the HTML
 splash through `early-startup.mjs`, waits (bounded) until the splash is on
 screen, and only then imports `main.mjs`, which adopts that window through
 `takeEarlyWindow()` and attaches its listeners. With packaged UI the splash is
-served as `openchamber-ui://app/__splash` by the same scheme handler as the
+served as `novacode-ui://app/__splash` by the same scheme handler as the
 application, so the navigation to the application stays on one origin and
 Chromium keeps the splash frame until the application has painted; a splash on
 a `data:` URL is another origin and the process swap shows an empty frame. Deep links and second launches
@@ -223,7 +223,7 @@ Use an explicit override when testing a different OpenCode CLI build or when a u
 
 - Floating Mini Chat windows.
 - Mini Chat loads from the resolved local UI origin in HMR development, not the
-  API server origin. Bundled mode keeps `openchamber-ui://` assets. Native zoom
+  API server origin. Bundled mode keeps `novacode-ui://` assets. Native zoom
   targets the focused window directly; composer focus adjusts interface scale,
   while terminal and file-editor focus adjust their own font sizes.
 - New Mini Chat windows default to the managed Chats target. Explicit project/worktree drafts retain their target, existing managed chat sessions reopen in their own directory, and the compact header omits project/branch metadata for Chats. Opening a managed draft back in the main window preserves that target.

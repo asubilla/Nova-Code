@@ -358,7 +358,7 @@ export const buildOpenCodeStatusReport = async (): Promise<string> => {
   // including OpenCode lifecycle lines, through electron-log.
   const opencodeHome = typeof pathInfo?.home === 'string' ? pathInfo.home : '';
   const isWindows = /Windows NT/.test(platform);
-  const isDesktop = origin.startsWith('openchamber-ui://');
+  const isDesktop = origin.startsWith('novacode-ui://') || origin.startsWith('openchamber-ui://');
   lines.push('');
   lines.push('Log files:');
   lines.push(`- OpenCode: ${opencodeHome ? joinPath(opencodeHome, '.local/share/opencode/log', isWindows) : '<home>/.local/share/opencode/log'} (or $XDG_DATA_HOME/opencode/log when set)`);

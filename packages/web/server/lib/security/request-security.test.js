@@ -11,6 +11,14 @@ describe('request security runtime', () => {
 
     expect(await runtime.isRequestOriginAllowed({
       headers: {
+        origin: 'novacode-ui://app',
+        host: '192.168.1.130:1202',
+      },
+      socket: {},
+    })).toBe(true);
+
+    expect(await runtime.isRequestOriginAllowed({
+      headers: {
         origin: 'openchamber-ui://app',
         host: '192.168.1.130:1202',
       },
