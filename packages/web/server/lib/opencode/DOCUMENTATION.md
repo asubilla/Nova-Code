@@ -180,10 +180,15 @@ Managed health failures are classified as `timeout`, `connection_refused`, `conn
 
 Managed process ownership starts at spawn. The registry and runtime process
 handle include children that have not announced readiness yet, so shutdown can
-stop an in-flight startup. Readiness timeout, malformed startup output, and
-health-probe errors close that child before retrying. Shutdown cancels further
-startup attempts. Closing a process is single-flight and unregisters it only
-after it exits.
+stop an in-flight startup. Readiness is satisfied either by the child's
+`opencode server listening` stdout announcement or by a successful probe of the
+allocated port, whichever comes first: OpenCode block-buffers stdout when it is
+a pipe rather than a TTY, so the announcement can miss the readiness timeout
+while the port is already bound, and the health probe after readiness remains
+the authority on whether the server is healthy. Readiness timeout, malformed
+startup output, and health-probe errors close that child before retrying.
+Shutdown cancels further startup attempts. Closing a process is single-flight
+and unregisters it only after it exits.
 
 On Windows, managed teardown invokes the existing tree termination command
 before terminating the root. Calling `child.kill()` first loses the ancestry

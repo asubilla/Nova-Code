@@ -1,4 +1,5 @@
 import { EventEmitter } from 'node:events';
+import net from 'node:net';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const spawnMock = vi.fn();
@@ -152,6 +153,28 @@ describe('OpenCode lifecycle', () => {
       }
     } finally {
       await runtime.testState.openCodeProcess.close();
+    }
+  });
+
+  it('treats a bound port as readiness when the child never announces on stdout', async () => {
+    let server = null;
+    let boundPort = null;
+    spawnMock.mockImplementation((binary, args) => {
+      const child = createMockChild();
+      boundPort = Number(args[args.indexOf('--port') + 1]);
+      server = net.createServer();
+      server.listen(boundPort, '127.0.0.1');
+      return child;
+    });
+    globalThis.fetch = vi.fn(async () => ({ ok: false }));
+    const runtime = createRuntime({}, {}, { ENV_CONFIGURED_OPENCODE_PORT: null });
+    try {
+      const started = await runtime.startOpenCode();
+      expect(boundPort).toBeGreaterThan(0);
+      expect(started.url).toBe(`http://127.0.0.1:${boundPort}`);
+      await started.close();
+    } finally {
+      if (server) await new Promise((resolve) => server.close(resolve));
     }
   });
 

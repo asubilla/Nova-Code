@@ -457,10 +457,12 @@ export const createOpenCodeLifecycleRuntime = (deps) => {
       let stdout = '';
       let stderr = '';
       let done = false;
+      let cleanupPortProbe = () => {};
       const finish = (handler, value) => {
         if (done) return;
         done = true;
         clearTimeout(timer);
+        cleanupPortProbe();
         child.stdout?.off('data', onStdout);
         child.stderr?.off('data', onStderr);
         child.off('exit', onExit);
@@ -503,6 +505,46 @@ export const createOpenCodeLifecycleRuntime = (deps) => {
       const timer = setTimeout(() => {
         finish(reject, new Error(`Timeout waiting for OpenCode to start after ${timeout}ms`));
       }, timeout);
+
+      // OpenCode block-buffers stdout when it is a pipe instead of a TTY, so
+      // the "server listening" line can miss the readiness timeout even though
+      // the port is already bound. Probe the allocated port in parallel and
+      // treat a successful connection as readiness; the parsed stdout line
+      // stays the fast path for announcing the URL, and the downstream health
+      // probe remains the authority on whether the server is healthy.
+      const probeHostname = hostname === '0.0.0.0' ? '127.0.0.1' : hostname === '::' ? '::1' : hostname;
+      let probeSocket = null;
+      let probeTimer = null;
+      const stopPortProbe = () => {
+        if (probeTimer) {
+          clearInterval(probeTimer);
+          probeTimer = null;
+        }
+        if (probeSocket) {
+          probeSocket.destroy();
+          probeSocket = null;
+        }
+      };
+      const probePortOnce = () => {
+        if (done) {
+          stopPortProbe();
+          return;
+        }
+        if (probeSocket) return;
+        const socket = net.connect({ host: probeHostname, port });
+        probeSocket = socket;
+        socket.setTimeout(1000);
+        const settle = (ready) => {
+          if (probeSocket === socket) probeSocket = null;
+          socket.destroy();
+          if (ready) finish(resolve, `http://${hostname}:${port}`);
+        };
+        socket.once('connect', () => settle(true));
+        socket.once('error', () => settle(false));
+        socket.once('timeout', () => settle(false));
+      };
+      cleanupPortProbe = stopPortProbe;
+      probeTimer = setInterval(probePortOnce, 300);
 
       child.stdout?.on('data', onStdout);
       child.stderr?.on('data', onStderr);

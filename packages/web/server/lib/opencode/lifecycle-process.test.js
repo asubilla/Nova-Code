@@ -10,7 +10,7 @@ const alive = (pid) => {
 
 const createRuntime = (waitForReady, state) => createOpenCodeLifecycleRuntime({
   state,
-  env: { ENV_CONFIGURED_OPENCODE_PORT: 45678, ENV_CONFIGURED_OPENCODE_HOSTNAME: '127.0.0.1' },
+  env: { ENV_CONFIGURED_OPENCODE_PORT: 0, ENV_CONFIGURED_OPENCODE_HOSTNAME: '127.0.0.1' },
   syncToHmrState() {}, syncFromHmrState() {},
   ensureOpencodeCliEnv: () => process.execPath,
   applyOpencodeBinaryFromSettings: async () => {},
@@ -23,24 +23,36 @@ const createRuntime = (waitForReady, state) => createOpenCodeLifecycleRuntime({
 });
 
 describe('managed process lifecycle with real children', () => {
-  for (const failure of ['invalid-readiness', 'health-error', 'startup-timeout', 'shutdown-during-startup', 'none']) {
+  for (const failure of ['invalid-readiness', 'health-error', 'startup-timeout', 'shutdown-during-startup', 'silent-listener', 'none']) {
     it(`reaps the server and its child after ${failure}`, async () => {
       const root = await fs.mkdtemp(path.join(os.tmpdir(), 'oc-process-'));
       const previousRegistry = process.env.NOVACODE_MANAGED_PROCESS_REGISTRY;
       process.env.NOVACODE_MANAGED_PROCESS_REGISTRY = path.join(root, 'registry');
       const marker = path.join(root, 'pids');
       const childScript = `process.on('SIGTERM', () => {}); require('node:fs').appendFileSync(${JSON.stringify(marker)}, process.pid + '\\n'); process.stdout.write('ready\\n'); setInterval(() => {}, 1000);`;
-      let readinessMessage = 'opencode server listening on http://127.0.0.1:45678\n';
-      if (failure === 'invalid-readiness') readinessMessage = 'opencode server listening without a URL\n';
-      if (failure === 'startup-timeout' || failure === 'shutdown-during-startup') readinessMessage = '';
+      // valid: announce the real allocated port; invalid: malformed line;
+      // none: stay silent (startup-timeout/shutdown paths, plus the
+      // silent-listener case that binds the port without ever announcing).
+      const announceMode = failure === 'invalid-readiness'
+        ? 'invalid'
+        : (failure === 'startup-timeout' || failure === 'shutdown-during-startup' || failure === 'silent-listener')
+          ? 'none'
+          : 'valid';
       // Node is an isolated stand-in for the native OpenCode binary. Lifecycle
       // still launches its real `serve --hostname ... --port ...` command.
       await fs.writeFile(path.join(root, 'serve'), `
         const fs = require('node:fs');
         fs.appendFileSync(${JSON.stringify(marker)}, process.pid + '\\n');
+        const cliArgs = process.argv.slice(2);
+        const port = cliArgs[cliArgs.indexOf('--port') + 1];
+        if (${JSON.stringify(failure)} === 'silent-listener') {
+          require('node:http').createServer((req, res) => res.end('ok')).listen(Number(port), '127.0.0.1');
+        }
         const child = require('node:child_process').spawn(process.execPath, ['-e', ${JSON.stringify(childScript)}], { stdio: ['ignore', 'pipe', 'ignore'] });
         child.stdout.once('data', () => {
-          process.stdout.write(${JSON.stringify(readinessMessage)});
+          const mode = ${JSON.stringify(announceMode)};
+          if (mode === 'valid') process.stdout.write('opencode server listening on http://127.0.0.1:' + port + '\\n');
+          else if (mode === 'invalid') process.stdout.write('opencode server listening without a URL\\n');
         });
         setInterval(() => {}, 1000);
       `);
@@ -50,7 +62,7 @@ describe('managed process lifecycle with real children', () => {
           if (failure === 'health-error') throw new Error('fixture health failure');
           return true;
         }, state);
-        if (failure === 'none') {
+        if (failure === 'none' || failure === 'silent-listener') {
           const server = await runtime.startOpenCode();
           await Promise.all([server.close(), server.close()]);
         } else if (failure === 'shutdown-during-startup') {
@@ -66,7 +78,8 @@ describe('managed process lifecycle with real children', () => {
           await expect(runtime.startOpenCode()).rejects.toThrow(failure === 'health-error' ? 'fixture health failure' : 'Failed to parse server url');
         }
         const pids = (await fs.readFile(marker, 'utf8')).trim().split('\n').map(Number);
-        expect(pids).toHaveLength(failure === 'none' || failure === 'shutdown-during-startup' ? 2 : 4);
+        const singleRunFailures = ['none', 'shutdown-during-startup', 'silent-listener'];
+        expect(pids).toHaveLength(singleRunFailures.includes(failure) ? 2 : 4);
         await expect.poll(() => pids.filter(alive), { timeout: 3000 }).toEqual([]);
         expect(await fs.readdir(path.join(root, 'registry')).catch(() => [])).toEqual([]);
       } finally {
