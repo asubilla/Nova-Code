@@ -100,7 +100,7 @@ export const createRelayService = ({
     return {
       enabled: stored?.enabled === true,
       relayUrl: override ?? normalizeRelayUrl(stored?.relayUrl),
-      // True when the endpoint is pinned by OPENCHAMBER_RELAY_URL (a self-hosted
+      // True when the endpoint is pinned by NOVACODE_RELAY_URL (a self-hosted
       // relay); the stored setting is ignored while it is set.
       relayUrlLocked: override !== null,
     };

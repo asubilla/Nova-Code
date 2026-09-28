@@ -714,7 +714,7 @@ OPTIONS:
                           so the link works away from the local network. The
                           device prefers the direct connection when reachable;
                           the instance brings the relay up on its own. Set
-                          OPENCHAMBER_RELAY_URL to use a self-hosted relay.
+                          NOVACODE_RELAY_URL to use a self-hosted relay.
   --name <label>          Label saved with the remote client token
   --ui-password <value>   Protect browser access when UI routes are enabled
   --api-only              Start in headless/API-only mode when starting

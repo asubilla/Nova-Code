@@ -42,7 +42,7 @@ function isValidRelayUrl(value) {
 }
 
 // Resolve the relay endpoint the same way the running host does (service.js):
-// OPENCHAMBER_RELAY_URL env override, then the stored setting, then the default —
+// NOVACODE_RELAY_URL env override, then the stored setting, then the default —
 // so the pairing link points at the same relay the host connects out to.
 function resolveRelayUrl(settings) {
   const envUrl = process.env.NOVACODE_RELAY_URL;
